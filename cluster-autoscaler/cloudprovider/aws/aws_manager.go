@@ -198,8 +198,7 @@ func createAWSManagerInternal(
 		}
 
 		if autoScalingService == nil {
-			c := newLaunchConfigurationInstanceTypeCache()
-			autoScalingService = &autoScalingWrapper{autoscaling.New(sess), c}
+			autoScalingService = &autoScalingWrapper{autoscaling.New(sess)}
 		}
 
 		if ec2Service == nil {
@@ -212,7 +211,7 @@ func createAWSManagerInternal(
 		return nil, err
 	}
 
-	cache, err := newASGCache(*autoScalingService, discoveryOpts.NodeGroupSpecs, specs)
+	cache, err := newASGCache(*autoScalingService, *ec2Service, discoveryOpts.NodeGroupSpecs, specs)
 	if err != nil {
 		return nil, err
 	}
@@ -315,7 +314,7 @@ func (m *AwsManager) getAsgTemplate(asg *asg) (*asgTemplate, error) {
 		klog.Warningf("Found multiple availability zones for ASG %q; using %s\n", asg.Name, az)
 	}
 
-	instanceTypeName, err := m.buildInstanceType(asg)
+	instanceTypeName, err := m.asgCache.getInstanceTypeForAsg(asg)
 	if err != nil {
 		return nil, err
 	}
@@ -329,23 +328,6 @@ func (m *AwsManager) getAsgTemplate(asg *asg) (*asgTemplate, error) {
 		}, nil
 	}
 	return nil, fmt.Errorf("ASG %q uses the unknown EC2 instance type %q", asg.Name, instanceTypeName)
-}
-
-func (m *AwsManager) buildInstanceType(asg *asg) (string, error) {
-	if asg.LaunchConfigurationName != "" {
-		return m.autoScalingService.getInstanceTypeByLCName(asg.LaunchConfigurationName)
-	} else if asg.LaunchTemplate != nil {
-		return m.ec2Service.getInstanceTypeByLT(asg.LaunchTemplate)
-	} else if asg.MixedInstancesPolicy != nil {
-		// always use first instance
-		if len(asg.MixedInstancesPolicy.instanceTypesOverrides) != 0 {
-			return asg.MixedInstancesPolicy.instanceTypesOverrides[0], nil
-		}
-
-		return m.ec2Service.getInstanceTypeByLT(asg.MixedInstancesPolicy.launchTemplate)
-	}
-
-	return "", errors.New("Unable to get instance type from launch config or launch template")
 }
 
 func (m *AwsManager) buildNodeFromTemplate(asg *asg, template *asgTemplate) (*apiv1.Node, error) {

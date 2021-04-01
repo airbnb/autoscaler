@@ -17,22 +17,8 @@ limitations under the License.
 package aws
 
 import (
-	"fmt"
-	"sync"
-	"time"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
-	"k8s.io/apimachinery/pkg/util/clock"
-	"k8s.io/apimachinery/pkg/util/rand"
-	"k8s.io/client-go/tools/cache"
-	klog "k8s.io/klog/v2"
-)
-
-const (
-	launchConfigurationCachedTTL = time.Minute * 20
-	cacheMinTTL                  = 120
-	cacheMaxTTL                  = 600
 )
 
 // autoScaling is the interface represents a specific aspect of the auto-scaling service provided by AWS SDK for use in CA
@@ -47,54 +33,10 @@ type autoScaling interface {
 // autoScalingWrapper provides several utility methods over the auto-scaling service provided by AWS SDK
 type autoScalingWrapper struct {
 	autoScaling
-	launchConfigurationInstanceTypeCache *expirationStore
 }
 
-// expirationStore cache the launch configuration with their instance type.
-// The store expires its keys based on a TTL. This TTL can have a jitter applied to it.
-// This allows to get a better repartition of the AWS queries.
-type expirationStore struct {
-	cache.Store
-	jitterClock *jitterClock
-}
-
-type instanceTypeCachedObject struct {
-	name         string
-	instanceType string
-}
-
-type jitterClock struct {
-	clock.Clock
-
-	jitter bool
-	sync.RWMutex
-}
-
-func newLaunchConfigurationInstanceTypeCache() *expirationStore {
-	jc := &jitterClock{}
-	return &expirationStore{
-		cache.NewExpirationStore(func(obj interface{}) (s string, e error) {
-			return obj.(instanceTypeCachedObject).name, nil
-		}, &cache.TTLPolicy{
-			TTL:   launchConfigurationCachedTTL,
-			Clock: jc,
-		}),
-		jc,
-	}
-}
-
-func (c *jitterClock) Since(ts time.Time) time.Duration {
-	since := time.Since(ts)
-	c.RLock()
-	defer c.RUnlock()
-	if c.jitter {
-		return since + (time.Second * time.Duration(rand.IntnRange(cacheMinTTL, cacheMaxTTL)))
-	}
-	return since
-}
-
-func (m autoScalingWrapper) getInstanceTypeByLCNames(launchConfigToQuery []*string) ([]*autoscaling.LaunchConfiguration, error) {
-	var launchConfigurations []*autoscaling.LaunchConfiguration
+func (m autoScalingWrapper) getInstanceTypeByLCNames(launchConfigToQuery []*string) (map[string]string, error) {
+	launchConfigurationsToInstanceType := map[string]string{}
 
 	for i := 0; i < len(launchConfigToQuery); i += 50 {
 		end := i + 50
@@ -110,31 +52,11 @@ func (m autoScalingWrapper) getInstanceTypeByLCNames(launchConfigToQuery []*stri
 		if err != nil {
 			return nil, err
 		}
-		launchConfigurations = append(launchConfigurations, r.LaunchConfigurations...)
 		for _, lc := range r.LaunchConfigurations {
-			_ = m.launchConfigurationInstanceTypeCache.Add(instanceTypeCachedObject{
-				name:         *lc.LaunchConfigurationName,
-				instanceType: *lc.InstanceType,
-			})
+			launchConfigurationsToInstanceType[*lc.LaunchConfigurationName] = *lc.InstanceType
 		}
 	}
-	return launchConfigurations, nil
-}
-
-func (m autoScalingWrapper) getInstanceTypeByLCName(name string) (string, error) {
-	if obj, found, _ := m.launchConfigurationInstanceTypeCache.GetByKey(name); found {
-		return obj.(instanceTypeCachedObject).instanceType, nil
-	}
-
-	launchConfigs, err := m.getInstanceTypeByLCNames([]*string{aws.String(name)})
-	if err != nil {
-		klog.Errorf("Failed to query the launch configuration %s to get the instance type: %v", name, err)
-		return "", err
-	}
-	if len(launchConfigs) < 1 || launchConfigs[0].InstanceType == nil {
-		return "", fmt.Errorf("unable to get first LaunchConfiguration for %s", name)
-	}
-	return *launchConfigs[0].InstanceType, nil
+	return launchConfigurationsToInstanceType, nil
 }
 
 func (m *autoScalingWrapper) getAutoscalingGroupsByNames(names []string) ([]*autoscaling.Group, error) {
@@ -167,48 +89,6 @@ func (m *autoScalingWrapper) getAutoscalingGroupsByNames(names []string) ([]*aut
 	}
 
 	return asgs, nil
-}
-
-func (m autoScalingWrapper) populateLaunchConfigurationInstanceTypeCache(autoscalingGroups []*autoscaling.Group) error {
-	var launchConfigToQuery []*string
-
-	m.launchConfigurationInstanceTypeCache.jitterClock.Lock()
-	m.launchConfigurationInstanceTypeCache.jitterClock.jitter = true
-	m.launchConfigurationInstanceTypeCache.jitterClock.Unlock()
-	for _, asg := range autoscalingGroups {
-		if asg == nil {
-			continue
-		}
-		if asg.LaunchConfigurationName == nil {
-			continue
-		}
-		_, found, _ := m.launchConfigurationInstanceTypeCache.GetByKey(*asg.LaunchConfigurationName)
-		if found {
-			continue
-		}
-		launchConfigToQuery = append(launchConfigToQuery, asg.LaunchConfigurationName)
-	}
-	m.launchConfigurationInstanceTypeCache.jitterClock.Lock()
-	m.launchConfigurationInstanceTypeCache.jitterClock.jitter = false
-	m.launchConfigurationInstanceTypeCache.jitterClock.Unlock()
-
-	// List expire old entries
-	_ = m.launchConfigurationInstanceTypeCache.List()
-
-	if len(launchConfigToQuery) == 0 {
-		klog.V(4).Infof("%d launch configurations already in cache", len(autoscalingGroups))
-		return nil
-	}
-	klog.V(4).Infof("%d launch configurations to query", len(launchConfigToQuery))
-
-	_, err := m.getInstanceTypeByLCNames(launchConfigToQuery)
-	if err != nil {
-		klog.Errorf("Failed to query %d launch configurations", len(launchConfigToQuery))
-		return err
-	}
-
-	klog.V(4).Infof("Successfully query %d launch configurations", len(launchConfigToQuery))
-	return nil
 }
 
 func (m *autoScalingWrapper) getAutoscalingGroupNamesByTags(kvs map[string]string) ([]string, error) {

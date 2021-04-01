@@ -35,12 +35,13 @@ const (
 )
 
 type asgCache struct {
-	registeredAsgs []*asg
-	asgToInstances map[AwsRef][]AwsInstanceRef
-	instanceToAsg  map[AwsInstanceRef]*asg
-	mutex          sync.Mutex
-	service        autoScalingWrapper
-	interrupt      chan struct{}
+	registeredAsgs       []*asg
+	asgToInstances       map[AwsRef][]AwsInstanceRef
+	instanceToAsg        map[AwsInstanceRef]*asg
+	asgInstanceTypeCache *instanceTypeExpirationStore
+	mutex                sync.Mutex
+	service              autoScalingWrapper
+	interrupt            chan struct{}
 
 	asgAutoDiscoverySpecs []asgAutoDiscoveryConfig
 	explicitlyConfigured  map[AwsRef]bool
@@ -70,12 +71,13 @@ type asg struct {
 	Tags                    []*autoscaling.TagDescription
 }
 
-func newASGCache(service autoScalingWrapper, explicitSpecs []string, autoDiscoverySpecs []asgAutoDiscoveryConfig) (*asgCache, error) {
+func newASGCache(autoScalingService autoScalingWrapper, ec2Service ec2Wrapper, explicitSpecs []string, autoDiscoverySpecs []asgAutoDiscoveryConfig) (*asgCache, error) {
 	registry := &asgCache{
 		registeredAsgs:        make([]*asg, 0),
-		service:               service,
+		service:               autoScalingService,
 		asgToInstances:        make(map[AwsRef][]AwsInstanceRef),
 		instanceToAsg:         make(map[AwsInstanceRef]*asg),
+		asgInstanceTypeCache:  newAsgInstanceTypeCache(&autoScalingService, &ec2Service),
 		interrupt:             make(chan struct{}),
 		asgAutoDiscoverySpecs: autoDiscoverySpecs,
 		explicitlyConfigured:  make(map[AwsRef]bool),
@@ -354,7 +356,7 @@ func (m *asgCache) regenerate() error {
 		return err
 	}
 
-	err = m.service.populateLaunchConfigurationInstanceTypeCache(groups)
+	err = m.asgInstanceTypeCache.populate(groups)
 	if err != nil {
 		klog.Warningf("Failed to fully populate all launchConfigurations: %v", err)
 	}
@@ -394,6 +396,14 @@ func (m *asgCache) regenerate() error {
 	m.asgToInstances = newAsgToInstancesCache
 	m.instanceToAsg = newInstanceToAsgCache
 	return nil
+}
+
+func (m *asgCache) getInstanceTypeForAsg(asg *asg) (string, error) {
+	if obj, found, _ := m.asgInstanceTypeCache.GetByKey(asg.AwsRef.Name); found {
+		return obj.(instanceTypeCachedObject).instanceType, nil
+	}
+
+	return "", fmt.Errorf("Could not find instance type for %s", asg.AwsRef.Name)
 }
 
 func (m *asgCache) createPlaceholdersForDesiredNonStartedInstances(groups []*autoscaling.Group) []*autoscaling.Group {
@@ -441,7 +451,7 @@ func (m *asgCache) buildAsgFromAWS(g *autoscaling.Group) (*asg, error) {
 	}
 
 	if g.LaunchTemplate != nil {
-		asg.LaunchTemplate = m.buildLaunchTemplateFromSpec(g.LaunchTemplate)
+		asg.LaunchTemplate = buildLaunchTemplateFromSpec(g.LaunchTemplate)
 	}
 
 	if g.MixedInstancesPolicy != nil {
@@ -454,42 +464,12 @@ func (m *asgCache) buildAsgFromAWS(g *autoscaling.Group) (*asg, error) {
 		}
 
 		asg.MixedInstancesPolicy = &mixedInstancesPolicy{
-			launchTemplate:         m.buildLaunchTemplateFromSpec(g.MixedInstancesPolicy.LaunchTemplate.LaunchTemplateSpecification),
+			launchTemplate:         buildLaunchTemplateFromSpec(g.MixedInstancesPolicy.LaunchTemplate.LaunchTemplateSpecification),
 			instanceTypesOverrides: getInstanceTypes(g.MixedInstancesPolicy.LaunchTemplate.Overrides),
 		}
 	}
 
 	return asg, nil
-}
-
-func (m *asgCache) buildLaunchTemplateFromSpec(ltSpec *autoscaling.LaunchTemplateSpecification) *launchTemplate {
-	// NOTE(jaypipes): The LaunchTemplateSpecification.Version is a pointer to
-	// string. When the pointer is nil, EC2 AutoScaling API considers the value
-	// to be "$Default", however aws.StringValue(ltSpec.Version) will return an
-	// empty string (which is not considered the same as "$Default" or a nil
-	// string pointer. So, in order to not pass an empty string as the version
-	// for the launch template when we communicate with the EC2 AutoScaling API
-	// using the information in the launchTemplate, we store the string
-	// "$Default" here when the ltSpec.Version is a nil pointer.
-	//
-	// See:
-	//
-	// https://github.com/kubernetes/autoscaler/issues/1728
-	// https://github.com/aws/aws-sdk-go/blob/81fad3b797f4a9bd1b452a5733dd465eefef1060/service/autoscaling/api.go#L10666-L10671
-	//
-	// A cleaner alternative might be to make launchTemplate.version a string
-	// pointer instead of a string, or even store the aws-sdk-go's
-	// LaunchTemplateSpecification structs directly.
-	var version string
-	if ltSpec.Version == nil {
-		version = "$Default"
-	} else {
-		version = aws.StringValue(ltSpec.Version)
-	}
-	return &launchTemplate{
-		name:    aws.StringValue(ltSpec.LaunchTemplateName),
-		version: version,
-	}
 }
 
 func (m *asgCache) buildInstanceRefFromAWS(instance *autoscaling.Instance) AwsInstanceRef {
