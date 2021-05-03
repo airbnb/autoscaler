@@ -1,10 +1,11 @@
 package aws
 
 import (
+	"testing"
+
 	sdkaws "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestBuildLaunchTemplateFromSpec(t *testing.T) {

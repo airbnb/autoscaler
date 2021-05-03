@@ -1,14 +1,15 @@
 package aws
 
 import (
+	"sync"
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/tools/cache"
 	klog "k8s.io/klog/v2"
-	"sync"
-	"time"
 )
 
 const (
@@ -40,12 +41,16 @@ type jitterClock struct {
 }
 
 func newAsgInstanceTypeCache(autoScalingService *autoScalingWrapper, ec2Service *ec2Wrapper) *instanceTypeExpirationStore {
+	return newAsgInstanceTypeCacheWithTTL(autoScalingService, ec2Service, asgInstanceTypeCacheTTL)
+}
+
+func newAsgInstanceTypeCacheWithTTL(autoScalingService *autoScalingWrapper, ec2Service *ec2Wrapper, ttl time.Duration) *instanceTypeExpirationStore {
 	jc := &jitterClock{}
 	return &instanceTypeExpirationStore{
 		cache.NewExpirationStore(func(obj interface{}) (s string, e error) {
 			return obj.(instanceTypeCachedObject).name, nil
 		}, &cache.TTLPolicy{
-			TTL:   asgInstanceTypeCacheTTL,
+			TTL:   ttl,
 			Clock: jc,
 		}),
 		jc,
