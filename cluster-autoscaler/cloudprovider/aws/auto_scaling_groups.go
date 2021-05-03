@@ -40,7 +40,7 @@ type asgCache struct {
 	instanceToAsg        map[AwsInstanceRef]*asg
 	asgInstanceTypeCache *instanceTypeExpirationStore
 	mutex                sync.Mutex
-	service              autoScalingWrapper
+	service              *autoScalingWrapper
 	interrupt            chan struct{}
 
 	asgAutoDiscoverySpecs []asgAutoDiscoveryConfig
@@ -71,13 +71,13 @@ type asg struct {
 	Tags                    []*autoscaling.TagDescription
 }
 
-func newASGCache(autoScalingService autoScalingWrapper, ec2Service ec2Wrapper, explicitSpecs []string, autoDiscoverySpecs []asgAutoDiscoveryConfig) (*asgCache, error) {
+func newASGCache(autoScalingService *autoScalingWrapper, ec2Service *ec2Wrapper, explicitSpecs []string, autoDiscoverySpecs []asgAutoDiscoveryConfig) (*asgCache, error) {
 	registry := &asgCache{
 		registeredAsgs:        make([]*asg, 0),
 		service:               autoScalingService,
 		asgToInstances:        make(map[AwsRef][]AwsInstanceRef),
 		instanceToAsg:         make(map[AwsInstanceRef]*asg),
-		asgInstanceTypeCache:  newAsgInstanceTypeCache(&autoScalingService, &ec2Service),
+		asgInstanceTypeCache:  newAsgInstanceTypeCache(autoScalingService, ec2Service),
 		interrupt:             make(chan struct{}),
 		asgAutoDiscoverySpecs: autoDiscoverySpecs,
 		explicitlyConfigured:  make(map[AwsRef]bool),
@@ -88,6 +88,14 @@ func newASGCache(autoScalingService autoScalingWrapper, ec2Service ec2Wrapper, e
 	}
 
 	return registry, nil
+}
+
+var getInstanceTypeForAsg = func(m *asgCache, asg *asg) (string, error) {
+	if obj, found, _ := m.asgInstanceTypeCache.GetByKey(asg.AwsRef.Name); found {
+		return obj.(instanceTypeCachedObject).instanceType, nil
+	}
+
+	return "", fmt.Errorf("Could not find instance type for %s", asg.AwsRef.Name)
 }
 
 // Fetch explicitly configured ASGs. These ASGs should never be unregistered
@@ -343,7 +351,7 @@ func (m *asgCache) regenerate() error {
 	newInstanceToAsgCache := make(map[AwsInstanceRef]*asg)
 	newAsgToInstancesCache := make(map[AwsRef][]AwsInstanceRef)
 
-	// Build list of knowns ASG names
+	// Build list of known ASG names
 	refreshNames, err := m.buildAsgNames()
 	if err != nil {
 		return err
@@ -396,14 +404,6 @@ func (m *asgCache) regenerate() error {
 	m.asgToInstances = newAsgToInstancesCache
 	m.instanceToAsg = newInstanceToAsgCache
 	return nil
-}
-
-func (m *asgCache) getInstanceTypeForAsg(asg *asg) (string, error) {
-	if obj, found, _ := m.asgInstanceTypeCache.GetByKey(asg.AwsRef.Name); found {
-		return obj.(instanceTypeCachedObject).instanceType, nil
-	}
-
-	return "", fmt.Errorf("Could not find instance type for %s", asg.AwsRef.Name)
 }
 
 func (m *asgCache) createPlaceholdersForDesiredNonStartedInstances(groups []*autoscaling.Group) []*autoscaling.Group {

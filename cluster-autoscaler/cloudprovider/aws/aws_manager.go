@@ -162,7 +162,7 @@ func getRegion(cfg ...*aws.Config) string {
 	return region
 }
 
-// createAwsManagerInternal allows for a customer autoScalingWrapper to be passed in by tests
+// createAwsManagerInternal allows for a custom objects to be passed in by tests
 //
 // #1449 If running tests outside of AWS without AWS_REGION among environment
 // variables, avoid a 5+ second EC2 Metadata lookup timeout in getRegion by
@@ -211,7 +211,7 @@ func createAWSManagerInternal(
 		return nil, err
 	}
 
-	cache, err := newASGCache(*autoScalingService, *ec2Service, discoveryOpts.NodeGroupSpecs, specs)
+	cache, err := newASGCache(autoScalingService, ec2Service, discoveryOpts.NodeGroupSpecs, specs)
 	if err != nil {
 		return nil, err
 	}
@@ -314,7 +314,7 @@ func (m *AwsManager) getAsgTemplate(asg *asg) (*asgTemplate, error) {
 		klog.Warningf("Found multiple availability zones for ASG %q; using %s\n", asg.Name, az)
 	}
 
-	instanceTypeName, err := m.asgCache.getInstanceTypeForAsg(asg)
+	instanceTypeName, err := getInstanceTypeForAsg(m.asgCache, asg)
 	if err != nil {
 		return nil, err
 	}
