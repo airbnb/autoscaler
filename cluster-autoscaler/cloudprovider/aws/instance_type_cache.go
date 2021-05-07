@@ -23,7 +23,7 @@ const (
 // This allows to get a better repartition of the AWS queries.
 type instanceTypeExpirationStore struct {
 	cache.Store
-	jitterClock *jitterClock
+	jitterClock clock.Clock
 	awsService  *awsWrapper
 }
 
@@ -40,18 +40,22 @@ type jitterClock struct {
 }
 
 func newAsgInstanceTypeCache(awsService *awsWrapper) *instanceTypeExpirationStore {
-	return newAsgInstanceTypeCacheWithTTL(awsService, asgInstanceTypeCacheTTL)
-}
-
-func newAsgInstanceTypeCacheWithTTL(awsService *awsWrapper, ttl time.Duration) *instanceTypeExpirationStore {
 	jc := &jitterClock{}
-	return &instanceTypeExpirationStore{
+	return newAsgInstanceTypeCacheWithClock(
+		awsService,
+		jc,
 		cache.NewExpirationStore(func(obj interface{}) (s string, e error) {
 			return obj.(instanceTypeCachedObject).name, nil
 		}, &cache.TTLPolicy{
-			TTL:   ttl,
+			TTL:   asgInstanceTypeCacheTTL,
 			Clock: jc,
 		}),
+	)
+}
+
+func newAsgInstanceTypeCacheWithClock(awsService *awsWrapper, jc clock.Clock, store cache.Store) *instanceTypeExpirationStore {
+	return &instanceTypeExpirationStore{
+		store,
 		jc,
 		awsService,
 	}
@@ -71,9 +75,12 @@ func (m instanceTypeExpirationStore) populate(autoscalingGroups []*autoscaling.G
 	launchConfigsToQuery := map[string]*string{}
 	launchTemplatesToQuery := map[string]*autoscaling.LaunchTemplateSpecification{}
 
-	m.jitterClock.Lock()
-	m.jitterClock.jitter = true
-	m.jitterClock.Unlock()
+	if c, ok := m.jitterClock.(*jitterClock); ok {
+		c.Lock()
+		c.jitter = true
+		c.Unlock()
+	}
+
 	for _, asg := range autoscalingGroups {
 		name := aws.StringValue(asg.AutoScalingGroupName)
 
@@ -100,9 +107,12 @@ func (m instanceTypeExpirationStore) populate(autoscalingGroups []*autoscaling.G
 			}
 		}
 	}
-	m.jitterClock.Lock()
-	m.jitterClock.jitter = false
-	m.jitterClock.Unlock()
+
+	if c, ok := m.jitterClock.(*jitterClock); ok {
+		c.Lock()
+		c.jitter = false
+		c.Unlock()
+	}
 
 	// List expires old entries
 	_ = m.List()

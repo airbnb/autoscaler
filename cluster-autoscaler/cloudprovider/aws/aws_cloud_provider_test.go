@@ -21,52 +21,11 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
 )
-
-type autoScalingMock struct {
-	mock.Mock
-}
-
-func (a *autoScalingMock) DescribeAutoScalingGroupsPages(i *autoscaling.DescribeAutoScalingGroupsInput, fn func(*autoscaling.DescribeAutoScalingGroupsOutput, bool) bool) error {
-	args := a.Called(i, fn)
-	return args.Error(0)
-}
-
-func (a *autoScalingMock) DescribeLaunchConfigurations(i *autoscaling.DescribeLaunchConfigurationsInput) (*autoscaling.DescribeLaunchConfigurationsOutput, error) {
-	args := a.Called(i)
-	return args.Get(0).(*autoscaling.DescribeLaunchConfigurationsOutput), nil
-}
-
-func (a *autoScalingMock) DescribeTagsPages(i *autoscaling.DescribeTagsInput, fn func(*autoscaling.DescribeTagsOutput, bool) bool) error {
-	args := a.Called(i, fn)
-	return args.Error(0)
-}
-
-func (a *autoScalingMock) SetDesiredCapacity(input *autoscaling.SetDesiredCapacityInput) (*autoscaling.SetDesiredCapacityOutput, error) {
-	args := a.Called(input)
-	return args.Get(0).(*autoscaling.SetDesiredCapacityOutput), nil
-}
-
-func (a *autoScalingMock) TerminateInstanceInAutoScalingGroup(input *autoscaling.TerminateInstanceInAutoScalingGroupInput) (*autoscaling.TerminateInstanceInAutoScalingGroupOutput, error) {
-	args := a.Called(input)
-	return args.Get(0).(*autoscaling.TerminateInstanceInAutoScalingGroupOutput), nil
-}
-
-type ec2Mock struct {
-	mock.Mock
-}
-
-func (e *ec2Mock) DescribeLaunchTemplateVersions(i *ec2.DescribeLaunchTemplateVersionsInput) (*ec2.DescribeLaunchTemplateVersionsOutput, error) {
-	args := e.Called(i)
-	return args.Get(0).(*ec2.DescribeLaunchTemplateVersionsOutput), nil
-}
-
-var testAwsService = awsWrapper{&autoScalingMock{}, &ec2Mock{}}
 
 var testAwsManager = &AwsManager{
 	asgCache: &asgCache{

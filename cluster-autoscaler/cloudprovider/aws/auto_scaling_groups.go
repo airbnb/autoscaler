@@ -90,7 +90,8 @@ func newASGCache(awsService *awsWrapper, explicitSpecs []string, autoDiscoverySp
 	return registry, nil
 }
 
-var getInstanceTypeForAsg = func(m *asgCache, asg *asg) (string, error) {
+// Use a function variable for ease of testing
+var getCachedInstanceTypeForAsg = func(m *asgCache, asg *asg) (string, error) {
 	if obj, found, _ := m.asgInstanceTypeCache.GetByKey(asg.AwsRef.Name); found {
 		return obj.(instanceTypeCachedObject).instanceType, nil
 	}

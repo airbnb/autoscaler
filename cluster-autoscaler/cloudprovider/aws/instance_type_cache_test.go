@@ -10,6 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/util/clock"
+	"k8s.io/client-go/tools/cache"
 )
 
 func TestInstanceTypeCache(t *testing.T) {
@@ -152,8 +154,19 @@ func TestLTVersionChange(t *testing.T) {
 		})
 	}
 
-	ttl := time.Second * 2
-	m := newAsgInstanceTypeCacheWithTTL(&awsWrapper{a, e}, ttl)
+	fakeClock := clock.NewFakeClock(time.Unix(0, 0))
+	fakeStore := cache.NewFakeExpirationStore(
+		func(obj interface{}) (s string, e error) {
+			return obj.(instanceTypeCachedObject).name, nil
+		},
+		nil,
+		&cache.TTLPolicy{
+			TTL:   asgInstanceTypeCacheTTL,
+			Clock: fakeClock,
+		},
+		fakeClock,
+	)
+	m := newAsgInstanceTypeCacheWithClock(&awsWrapper{a, e}, fakeClock, fakeStore)
 
 	for i := 0; i < 2; i++ {
 		err := m.populate([]*autoscaling.Group{
@@ -169,14 +182,12 @@ func TestLTVersionChange(t *testing.T) {
 
 		result, found, err := m.GetByKey(asgName)
 		assert.NoError(t, err)
-		assert.Truef(t, found, "%s did not find asg", asgName)
+		assert.Truef(t, found, "%s did not find asg (iteration %d)", asgName, i)
 
 		foundInstanceType := result.(instanceTypeCachedObject).instanceType
-		assert.Equalf(t, foundInstanceType, *instanceTypes[i], "%s had %s, expected %s", asgName, foundInstanceType, *instanceTypes[i])
+		assert.Equalf(t, foundInstanceType, *instanceTypes[i], "%s had %s, expected %s (iteration %d)", asgName, foundInstanceType, *instanceTypes[i], i)
 
-		// ensure the cache has expired
-		if i != 1 {
-			time.Sleep(ttl)
-		}
+		// Expire the first instance
+		fakeClock.SetTime(time.Now().Add(asgInstanceTypeCacheTTL + 10*time.Minute))
 	}
 }

@@ -305,7 +305,7 @@ func (m *AwsManager) getAsgTemplate(asg *asg) (*asgTemplate, error) {
 		klog.Warningf("Found multiple availability zones for ASG %q; using %s\n", asg.Name, az)
 	}
 
-	instanceTypeName, err := getInstanceTypeForAsg(m.asgCache, asg)
+	instanceTypeName, err := getCachedInstanceTypeForAsg(m.asgCache, asg)
 	if err != nil {
 		return nil, err
 	}
