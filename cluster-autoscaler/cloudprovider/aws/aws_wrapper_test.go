@@ -27,9 +27,10 @@ import (
 )
 
 func TestMoreThen50Groups(t *testing.T) {
-	service := &AutoScalingMock{}
-	autoScalingWrapper := &autoScalingWrapper{
-		autoScaling: service,
+	a := &autoScalingMock{}
+	awsWrapper := &awsWrapper{
+		autoScalingI: a,
+		ec2I:         nil,
 	}
 
 	// Generate 51 ASG names
@@ -39,7 +40,7 @@ func TestMoreThen50Groups(t *testing.T) {
 	}
 
 	// First batch, first 50 elements
-	service.On("DescribeAutoScalingGroupsPages",
+	a.On("DescribeAutoScalingGroupsPages",
 		&autoscaling.DescribeAutoScalingGroupsInput{
 			AutoScalingGroupNames: aws.StringSlice(names[:50]),
 			MaxRecords:            aws.Int64(maxRecordsReturnedByAPI),
@@ -51,7 +52,7 @@ func TestMoreThen50Groups(t *testing.T) {
 	}).Return(nil)
 
 	// Second batch, element 51
-	service.On("DescribeAutoScalingGroupsPages",
+	a.On("DescribeAutoScalingGroupsPages",
 		&autoscaling.DescribeAutoScalingGroupsInput{
 			AutoScalingGroupNames: aws.StringSlice([]string{"asg-50"}),
 			MaxRecords:            aws.Int64(maxRecordsReturnedByAPI),
@@ -62,9 +63,69 @@ func TestMoreThen50Groups(t *testing.T) {
 		fn(testNamedDescribeAutoScalingGroupsOutput("asg-2", 1, "test-instance-id"), false)
 	}).Return(nil)
 
-	asgs, err := autoScalingWrapper.getAutoscalingGroupsByNames(names)
+	asgs, err := awsWrapper.getAutoscalingGroupsByNames(names)
 	assert.Nil(t, err)
 	assert.Equal(t, len(asgs), 2)
 	assert.Equal(t, *asgs[0].AutoScalingGroupName, "asg-1")
 	assert.Equal(t, *asgs[1].AutoScalingGroupName, "asg-2")
+}
+
+func TestBuildLaunchTemplateFromSpec(t *testing.T) {
+	assert := assert.New(t)
+
+	units := []struct {
+		name string
+		in   *autoscaling.LaunchTemplateSpecification
+		exp  *launchTemplate
+	}{
+		{
+			name: "non-default, specified version",
+			in: &autoscaling.LaunchTemplateSpecification{
+				LaunchTemplateName: aws.String("foo"),
+				Version:            aws.String("1"),
+			},
+			exp: &launchTemplate{
+				name:    "foo",
+				version: "1",
+			},
+		},
+		{
+			name: "non-default, specified $Latest",
+			in: &autoscaling.LaunchTemplateSpecification{
+				LaunchTemplateName: aws.String("foo"),
+				Version:            aws.String("$Latest"),
+			},
+			exp: &launchTemplate{
+				name:    "foo",
+				version: "$Latest",
+			},
+		},
+		{
+			name: "specified $Default",
+			in: &autoscaling.LaunchTemplateSpecification{
+				LaunchTemplateName: aws.String("foo"),
+				Version:            aws.String("$Default"),
+			},
+			exp: &launchTemplate{
+				name:    "foo",
+				version: "$Default",
+			},
+		},
+		{
+			name: "no version specified",
+			in: &autoscaling.LaunchTemplateSpecification{
+				LaunchTemplateName: aws.String("foo"),
+				Version:            nil,
+			},
+			exp: &launchTemplate{
+				name:    "foo",
+				version: "$Default",
+			},
+		},
+	}
+
+	for _, unit := range units {
+		got := buildLaunchTemplateFromSpec(unit.in)
+		assert.Equal(unit.exp, got)
+	}
 }

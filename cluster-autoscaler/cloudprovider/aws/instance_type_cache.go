@@ -23,9 +23,8 @@ const (
 // This allows to get a better repartition of the AWS queries.
 type instanceTypeExpirationStore struct {
 	cache.Store
-	jitterClock        *jitterClock
-	autoScalingService *autoScalingWrapper
-	ec2Service         *ec2Wrapper
+	jitterClock *jitterClock
+	awsService  *awsWrapper
 }
 
 type instanceTypeCachedObject struct {
@@ -40,11 +39,11 @@ type jitterClock struct {
 	sync.RWMutex
 }
 
-func newAsgInstanceTypeCache(autoScalingService *autoScalingWrapper, ec2Service *ec2Wrapper) *instanceTypeExpirationStore {
-	return newAsgInstanceTypeCacheWithTTL(autoScalingService, ec2Service, asgInstanceTypeCacheTTL)
+func newAsgInstanceTypeCache(awsService *awsWrapper) *instanceTypeExpirationStore {
+	return newAsgInstanceTypeCacheWithTTL(awsService, asgInstanceTypeCacheTTL)
 }
 
-func newAsgInstanceTypeCacheWithTTL(autoScalingService *autoScalingWrapper, ec2Service *ec2Wrapper, ttl time.Duration) *instanceTypeExpirationStore {
+func newAsgInstanceTypeCacheWithTTL(awsService *awsWrapper, ttl time.Duration) *instanceTypeExpirationStore {
 	jc := &jitterClock{}
 	return &instanceTypeExpirationStore{
 		cache.NewExpirationStore(func(obj interface{}) (s string, e error) {
@@ -54,8 +53,7 @@ func newAsgInstanceTypeCacheWithTTL(autoScalingService *autoScalingWrapper, ec2S
 			Clock: jc,
 		}),
 		jc,
-		autoScalingService,
-		ec2Service,
+		awsService,
 	}
 }
 
@@ -117,7 +115,7 @@ func (m instanceTypeExpirationStore) populate(autoscalingGroups []*autoscaling.G
 	for _, cfgName := range launchConfigsToQuery {
 		launchConfigNames = append(launchConfigNames, cfgName)
 	}
-	launchConfigs, err := m.autoScalingService.getInstanceTypeByLCNames(launchConfigNames)
+	launchConfigs, err := m.awsService.getInstanceTypeByLCNames(launchConfigNames)
 	if err != nil {
 		klog.Errorf("Failed to query %d launch configurations", len(launchConfigsToQuery))
 		return err
@@ -134,7 +132,7 @@ func (m instanceTypeExpirationStore) populate(autoscalingGroups []*autoscaling.G
 	// Have to query LaunchTemplates one-at-a-time, since there's no way to query <lt, version> pairs in bulk
 	for asgName, launchTemplateSpec := range launchTemplatesToQuery {
 		launchTemplate := buildLaunchTemplateFromSpec(launchTemplateSpec)
-		instanceType, err := m.ec2Service.getInstanceTypeByLT(launchTemplate)
+		instanceType, err := m.awsService.getInstanceTypeByLT(launchTemplate)
 		if err != nil {
 			klog.Error("Failed to query launch tempate %s", launchTemplate.name)
 			continue

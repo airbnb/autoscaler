@@ -13,7 +13,7 @@ import (
 )
 
 func TestInstanceTypeCache(t *testing.T) {
-	c := newAsgInstanceTypeCache(nil, nil)
+	c := newAsgInstanceTypeCache(nil)
 	err := c.Add(instanceTypeCachedObject{
 		name:         "123",
 		instanceType: "t2.medium",
@@ -32,8 +32,8 @@ func TestPopulate(t *testing.T) {
 		Version:            aws.String(ltVersion),
 	}
 
-	a := &AutoScalingMock{}
-	e := &EC2Mock{}
+	a := &autoScalingMock{}
+	e := &ec2Mock{}
 	a.On("DescribeLaunchConfigurations", &autoscaling.DescribeLaunchConfigurationsInput{
 		LaunchConfigurationNames: []*string{aws.String(ltName)},
 		MaxRecords:               aws.Int64(50),
@@ -108,7 +108,7 @@ func TestPopulate(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		m := newAsgInstanceTypeCache(&autoScalingWrapper{a}, &ec2Wrapper{e})
+		m := newAsgInstanceTypeCache(&awsWrapper{a, e})
 
 		err := m.populate([]*autoscaling.Group{
 			{
@@ -134,8 +134,8 @@ func TestLTVersionChange(t *testing.T) {
 	ltVersions := []*string{aws.String("1"), aws.String("2")}
 	instanceTypes := []*string{aws.String("t2.large"), aws.String("m4.xlarge")}
 
-	a := &AutoScalingMock{}
-	e := &EC2Mock{}
+	a := &autoScalingMock{}
+	e := &ec2Mock{}
 
 	for i := 0; i < 2; i++ {
 		e.On("DescribeLaunchTemplateVersions", &ec2.DescribeLaunchTemplateVersionsInput{
@@ -153,7 +153,7 @@ func TestLTVersionChange(t *testing.T) {
 	}
 
 	ttl := time.Second * 2
-	m := newAsgInstanceTypeCacheWithTTL(&autoScalingWrapper{a}, &ec2Wrapper{e}, ttl)
+	m := newAsgInstanceTypeCacheWithTTL(&awsWrapper{a, e}, ttl)
 
 	for i := 0; i < 2; i++ {
 		err := m.populate([]*autoscaling.Group{

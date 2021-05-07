@@ -40,7 +40,7 @@ type asgCache struct {
 	instanceToAsg        map[AwsInstanceRef]*asg
 	asgInstanceTypeCache *instanceTypeExpirationStore
 	mutex                sync.Mutex
-	service              *autoScalingWrapper
+	awsService           *awsWrapper
 	interrupt            chan struct{}
 
 	asgAutoDiscoverySpecs []asgAutoDiscoveryConfig
@@ -71,13 +71,13 @@ type asg struct {
 	Tags                    []*autoscaling.TagDescription
 }
 
-func newASGCache(autoScalingService *autoScalingWrapper, ec2Service *ec2Wrapper, explicitSpecs []string, autoDiscoverySpecs []asgAutoDiscoveryConfig) (*asgCache, error) {
+func newASGCache(awsService *awsWrapper, explicitSpecs []string, autoDiscoverySpecs []asgAutoDiscoveryConfig) (*asgCache, error) {
 	registry := &asgCache{
 		registeredAsgs:        make([]*asg, 0),
-		service:               autoScalingService,
+		awsService:            awsService,
 		asgToInstances:        make(map[AwsRef][]AwsInstanceRef),
 		instanceToAsg:         make(map[AwsInstanceRef]*asg),
-		asgInstanceTypeCache:  newAsgInstanceTypeCache(autoScalingService, ec2Service),
+		asgInstanceTypeCache:  newAsgInstanceTypeCache(awsService),
 		interrupt:             make(chan struct{}),
 		asgAutoDiscoverySpecs: autoDiscoverySpecs,
 		explicitlyConfigured:  make(map[AwsRef]bool),
@@ -227,7 +227,7 @@ func (m *asgCache) setAsgSizeNoLock(asg *asg, size int) error {
 		HonorCooldown:        aws.Bool(false),
 	}
 	klog.V(0).Infof("Setting asg %s size to %d", asg.Name, size)
-	_, err := m.service.SetDesiredCapacity(params)
+	_, err := m.awsService.SetDesiredCapacity(params)
 	if err != nil {
 		return err
 	}
@@ -280,7 +280,7 @@ func (m *asgCache) DeleteInstances(instances []*AwsInstanceRef) error {
 				InstanceId:                     aws.String(instance.Name),
 				ShouldDecrementDesiredCapacity: aws.Bool(true),
 			}
-			resp, err := m.service.TerminateInstanceInAutoScalingGroup(params)
+			resp, err := m.awsService.TerminateInstanceInAutoScalingGroup(params)
 			if err != nil {
 				return err
 			}
@@ -304,7 +304,7 @@ func (m *asgCache) fetchAutoAsgNames() ([]string, error) {
 	groupNames := make([]string, 0)
 
 	for _, spec := range m.asgAutoDiscoverySpecs {
-		names, err := m.service.getAutoscalingGroupNamesByTags(spec.Tags)
+		names, err := m.awsService.getAutoscalingGroupNamesByTags(spec.Tags)
 		if err != nil {
 			return nil, fmt.Errorf("cannot autodiscover ASGs: %s", err)
 		}
@@ -359,7 +359,7 @@ func (m *asgCache) regenerate() error {
 
 	// Fetch details of all ASGs
 	klog.V(4).Infof("Regenerating instance to ASG map for ASGs: %v", refreshNames)
-	groups, err := m.service.getAutoscalingGroupsByNames(refreshNames)
+	groups, err := m.awsService.getAutoscalingGroupsByNames(refreshNames)
 	if err != nil {
 		return err
 	}

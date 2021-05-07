@@ -260,7 +260,7 @@ func makeTaintSet(taints []apiv1.Taint) map[apiv1.Taint]bool {
 func TestFetchExplicitAsgs(t *testing.T) {
 	min, max, groupname := 1, 10, "coolasg"
 
-	s := &AutoScalingMock{}
+	s := &autoScalingMock{}
 	s.On("DescribeAutoScalingGroups", &autoscaling.DescribeAutoScalingGroupsInput{
 		AutoScalingGroupNames: []*string{aws.String(groupname)},
 		MaxRecords:            aws.Int64(1),
@@ -304,7 +304,7 @@ func TestFetchExplicitAsgs(t *testing.T) {
 	defer resetAWSRegion(os.LookupEnv("AWS_REGION"))
 	os.Setenv("AWS_REGION", "fanghorn")
 	instanceTypes, _ := GetStaticEC2InstanceTypes()
-	m, err := createAWSManagerInternal(nil, do, &autoScalingWrapper{s}, nil, instanceTypes)
+	m, err := createAWSManagerInternal(nil, do, &awsWrapper{s, nil}, instanceTypes)
 	assert.NoError(t, err)
 
 	asgs := m.asgCache.Get()
@@ -349,7 +349,7 @@ func TestGetASGTemplate(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			e := &EC2Mock{}
+			e := &ec2Mock{}
 			e.On("DescribeLaunchTemplateVersions", &ec2.DescribeLaunchTemplateVersionsInput{
 				LaunchTemplateName: aws.String(ltName),
 				Versions:           []*string{aws.String(ltVersion)},
@@ -369,7 +369,7 @@ func TestGetASGTemplate(t *testing.T) {
 			instanceTypes, _ := GetStaticEC2InstanceTypes()
 			do := cloudprovider.NodeGroupDiscoveryOptions{}
 
-			m, err := createAWSManagerInternal(nil, do, nil, &ec2Wrapper{e}, instanceTypes)
+			m, err := createAWSManagerInternal(nil, do, &awsWrapper{nil, e}, instanceTypes)
 			origGetInstanceTypeFunc := getInstanceTypeForAsg
 			defer func() { getInstanceTypeForAsg = origGetInstanceTypeFunc }()
 			getInstanceTypeForAsg = func(m *asgCache, asg *asg) (string, error) {
@@ -406,7 +406,7 @@ func TestFetchAutoAsgs(t *testing.T) {
 	min, max := 1, 10
 	groupname, tags := "coolasg", []string{"tag", "anothertag"}
 
-	s := &AutoScalingMock{}
+	s := &autoScalingMock{}
 	// Lookup groups associated with tags
 	expectedTagsInput := &autoscaling.DescribeTagsInput{
 		Filters: []*autoscaling.Filter{
@@ -457,7 +457,7 @@ func TestFetchAutoAsgs(t *testing.T) {
 	os.Setenv("AWS_REGION", "fanghorn")
 	// fetchAutoASGs is called at manager creation time, via forceRefresh
 	instanceTypes, _ := GetStaticEC2InstanceTypes()
-	m, err := createAWSManagerInternal(nil, do, &autoScalingWrapper{s}, nil, instanceTypes)
+	m, err := createAWSManagerInternal(nil, do, &awsWrapper{s, nil}, instanceTypes)
 	assert.NoError(t, err)
 
 	asgs := m.asgCache.Get()
