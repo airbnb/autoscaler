@@ -1038,7 +1038,7 @@ func TestStaticAutoscalerInstaceCreationErrors(t *testing.T) {
 	clusterState.UpdateNodes([]*apiv1.Node{}, nil, now)
 
 	// delete nodes with create errors
-	autoscaler.deleteCreatedNodesWithErrors()
+	assert.True(t, autoscaler.deleteCreatedNodesWithErrors())
 
 	// check delete was called on correct nodes
 	nodeGroupA.AssertCalled(t, "DeleteNodes", mock.MatchedBy(
@@ -1062,7 +1062,7 @@ func TestStaticAutoscalerInstaceCreationErrors(t *testing.T) {
 	clusterState.UpdateNodes([]*apiv1.Node{}, nil, now)
 
 	// delete nodes with create errors
-	autoscaler.deleteCreatedNodesWithErrors()
+	assert.True(t, autoscaler.deleteCreatedNodesWithErrors())
 
 	// nodes should be deleted again
 	nodeGroupA.AssertCalled(t, "DeleteNodes", mock.MatchedBy(
@@ -1125,7 +1125,7 @@ func TestStaticAutoscalerInstaceCreationErrors(t *testing.T) {
 	clusterState.UpdateNodes([]*apiv1.Node{}, nil, now)
 
 	// delete nodes with create errors
-	autoscaler.deleteCreatedNodesWithErrors()
+	assert.False(t, autoscaler.deleteCreatedNodesWithErrors())
 
 	// we expect no more Delete Nodes
 	nodeGroupA.AssertNumberOfCalls(t, "DeleteNodes", 2)
