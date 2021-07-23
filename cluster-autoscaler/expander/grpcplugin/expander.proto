@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package grpcplugin;
+import "k8s.io/api/core/v1/generated.proto";
+//import "google/protobuf/struct.proto";
+option go_package = "cluster-autoscaler/expander/grpcplugin";
+
+
+
+// Interface for Expander
+service Expander {
+
+  rpc BestOption (BestOptionRequest)
+    returns (BestOptionResponse) {}
+}
+
+message BestOptionRequest {
+  repeated Option options = 1;
+  // can use api core node struct, we only need it, uniquely identify with string! should be all the info we need.
+  map<string, k8s.io.api.core.v1.Node> nodeInfoMap = 2;
+}
+message BestOptionResponse {
+  Option option = 1;
+}
+message Option {
+  //google.protobuf.Value nodeGroup = 1;
+  // only need the ID of nodegroup to uniquely identify the group, use this in the nodeInfo map.
+  string nodeGroupId = 1;
+  int32 nodeCount = 2;
+  string debug = 3;
+  repeated k8s.io.api.core.v1.Pod pod = 4;
+}
