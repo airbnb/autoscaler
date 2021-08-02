@@ -22,6 +22,8 @@ import (
 	"reflect"
 	"time"
 
+	kubeletapis "k8s.io/kubelet/pkg/apis"
+
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
@@ -172,6 +174,8 @@ func GetNodeInfoFromTemplate(nodeGroup cloudprovider.NodeGroup, daemonsets []*ap
 		return nil, errors.ToAutoscalerError(errors.CloudProviderError, err)
 	}
 
+	updateDeprecatedTemplateLabels(baseNodeInfo)
+
 	pods, err := daemonset.GetDaemonSetPodsForNode(baseNodeInfo, daemonsets, predicateChecker)
 	if err != nil {
 		return nil, errors.ToAutoscalerError(errors.InternalError, err)
@@ -184,6 +188,31 @@ func GetNodeInfoFromTemplate(nodeGroup cloudprovider.NodeGroup, daemonsets []*ap
 		return nil, typedErr
 	}
 	return sanitizedNodeInfo, nil
+}
+
+// UpdateDeprecatedTemplateLabels updates beta and deprecated labels from stable labels
+func updateDeprecatedTemplateLabels(nodeInfo *schedulerframework.NodeInfo) {
+	node := nodeInfo.Node()
+	if v, ok := node.ObjectMeta.Labels[apiv1.LabelArchStable]; ok {
+		node.ObjectMeta.Labels[kubeletapis.LabelArch] = v
+	}
+	if v, ok := node.ObjectMeta.Labels[apiv1.LabelOSStable]; ok {
+		node.ObjectMeta.Labels[kubeletapis.LabelOS] = v
+	}
+	if v, ok := node.ObjectMeta.Labels[apiv1.LabelInstanceTypeStable]; ok {
+		node.ObjectMeta.Labels[apiv1.LabelInstanceType] = v
+	}
+	if v, ok := node.ObjectMeta.Labels[apiv1.LabelTopologyRegion]; ok {
+		node.ObjectMeta.Labels[apiv1.LabelZoneRegion] = v
+	}
+	if v, ok := node.ObjectMeta.Labels[apiv1.LabelTopologyZone]; ok {
+		node.ObjectMeta.Labels[apiv1.LabelZoneFailureDomain] = v
+	}
+}
+
+// isVirtualNode determines if the node is created by virtual kubelet
+func isVirtualNode(node *apiv1.Node) bool {
+	return node.ObjectMeta.Labels["type"] == "virtual-kubelet"
 }
 
 // FilterOutNodesFromNotAutoscaledGroups return subset of input nodes for which cloud provider does not
