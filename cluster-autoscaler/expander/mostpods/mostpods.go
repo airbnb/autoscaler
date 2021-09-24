@@ -17,22 +17,20 @@ limitations under the License.
 package mostpods
 
 import (
-	"k8s.io/autoscaler/cluster-autoscaler/expander"
-	"k8s.io/autoscaler/cluster-autoscaler/expander/random"
-	schedulernodeinfo "k8s.io/kubernetes/pkg/scheduler/nodeinfo"
+  "k8s.io/autoscaler/cluster-autoscaler/expander"
+  schedulernodeinfo "k8s.io/kubernetes/pkg/scheduler/nodeinfo"
 )
 
 type mostpods struct {
-	fallbackStrategy expander.Strategy
 }
 
-// NewStrategy returns a scale up strategy (expander) that picks the node group that can schedule the most pods
-func NewStrategy() expander.Strategy {
-	return &mostpods{random.NewStrategy()}
+// NewFilter returns a scale up filter that picks the node group that can schedule the most pods
+func NewFilter() expander.Filter {
+	return &mostpods{}
 }
 
 // BestOption Selects the expansion option that schedules the most pods
-func (m *mostpods) BestOption(expansionOptions []expander.Option, nodeInfo map[string]*schedulernodeinfo.NodeInfo) *expander.Option {
+func (m *mostpods) BestOptions(expansionOptions []expander.Option, nodeInfo map[string]*schedulernodeinfo.NodeInfo) []expander.Option {
 	var maxPods int
 	var maxOptions []expander.Option
 
@@ -51,5 +49,5 @@ func (m *mostpods) BestOption(expansionOptions []expander.Option, nodeInfo map[s
 		return nil
 	}
 
-	return m.fallbackStrategy.BestOption(maxOptions, nodeInfo)
+	return maxOptions
 }
