@@ -34,7 +34,7 @@ import (
 )
 
 // ExpanderStrategyFromStrings creates an expander.Strategy according to the names of the expanders passed in
-func ExpanderStrategyFromStrings(expanderFlags []string, grpcExpanderCert string, grpcExpanderURL string, cloudProvider cloudprovider.CloudProvider,
+func ExpanderStrategyFromStrings(expanderFlags []string, grpcOpts grpcplugin.GRPCOpts, cloudProvider cloudprovider.CloudProvider,
 	autoscalingKubeClients *context.AutoscalingKubeClients, kubeClient kube_client.Interface,
 	configNamespace string) (expander.Strategy, errors.AutoscalerError) {
 	var filters []expander.Filter
@@ -70,10 +70,8 @@ func ExpanderStrategyFromStrings(expanderFlags []string, grpcExpanderCert string
 			lister := kubernetes.NewConfigMapListerForNamespace(kubeClient, stopChannel, configNamespace)
 			filters = append(filters, priority.NewFilter(lister.ConfigMaps(configNamespace), autoscalingKubeClients.Recorder))
     case expander.GRPCExpanderName:
-      // leave this for now while rebasing
-      // TODO: pass in cert stuff
-      klog.V(1).Info("GRPC expander chosen - fallback expander: random" )
-      filters = append(filters, grpcplugin.NewFilter(grpcExpanderCert, grpcExpanderURL))
+      klog.V(1).Info("GRPC expander chosen" )
+      filters = append(filters, grpcplugin.NewFilter(grpcOpts))
 		default:
 			return nil, errors.NewAutoscalerError(errors.InternalError, "Expander %s not supported", expanderFlag)
 		}
