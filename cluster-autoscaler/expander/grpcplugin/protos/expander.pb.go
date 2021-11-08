@@ -7,16 +7,16 @@
 package protos
 
 import (
-  context "context"
-  reflect "reflect"
-  sync "sync"
+	context "context"
+	reflect "reflect"
+	sync "sync"
 
-  grpc "google.golang.org/grpc"
-  codes "google.golang.org/grpc/codes"
-  status "google.golang.org/grpc/status"
-  protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-  protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-  v1 "k8s.io/api/core/v1"
+	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	v1 "k8s.io/api/core/v1"
 )
 
 const (

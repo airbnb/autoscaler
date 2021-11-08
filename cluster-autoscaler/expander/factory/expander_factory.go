@@ -17,20 +17,20 @@ limitations under the License.
 package factory
 
 import (
-  "k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
-  "k8s.io/autoscaler/cluster-autoscaler/context"
-  "k8s.io/autoscaler/cluster-autoscaler/expander"
-  "k8s.io/autoscaler/cluster-autoscaler/expander/grpcplugin"
-  "k8s.io/autoscaler/cluster-autoscaler/expander/mostpods"
-  "k8s.io/autoscaler/cluster-autoscaler/expander/price"
-  "k8s.io/autoscaler/cluster-autoscaler/expander/priority"
-  "k8s.io/autoscaler/cluster-autoscaler/expander/random"
-  "k8s.io/autoscaler/cluster-autoscaler/expander/waste"
-  "k8s.io/autoscaler/cluster-autoscaler/utils/errors"
-  "k8s.io/autoscaler/cluster-autoscaler/utils/kubernetes"
-  "k8s.io/klog/v2"
+	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
+	"k8s.io/autoscaler/cluster-autoscaler/context"
+	"k8s.io/autoscaler/cluster-autoscaler/expander"
+	"k8s.io/autoscaler/cluster-autoscaler/expander/grpcplugin"
+	"k8s.io/autoscaler/cluster-autoscaler/expander/mostpods"
+	"k8s.io/autoscaler/cluster-autoscaler/expander/price"
+	"k8s.io/autoscaler/cluster-autoscaler/expander/priority"
+	"k8s.io/autoscaler/cluster-autoscaler/expander/random"
+	"k8s.io/autoscaler/cluster-autoscaler/expander/waste"
+	"k8s.io/autoscaler/cluster-autoscaler/utils/errors"
+	"k8s.io/autoscaler/cluster-autoscaler/utils/kubernetes"
+	"k8s.io/klog/v2"
 
-  kube_client "k8s.io/client-go/kubernetes"
+	kube_client "k8s.io/client-go/kubernetes"
 )
 
 // ExpanderStrategyFromStrings creates an expander.Strategy according to the names of the expanders passed in
@@ -69,15 +69,15 @@ func ExpanderStrategyFromStrings(expanderFlags []string, grpcOpts grpcplugin.GRP
 			stopChannel := make(chan struct{})
 			lister := kubernetes.NewConfigMapListerForNamespace(kubeClient, stopChannel, configNamespace)
 			filters = append(filters, priority.NewFilter(lister.ConfigMaps(configNamespace), autoscalingKubeClients.Recorder))
-    case expander.GRPCExpanderName:
-      klog.V(1).Info("GRPC expander chosen" )
-      filters = append(filters, grpcplugin.NewFilter(grpcOpts))
+		case expander.GRPCExpanderName:
+			klog.V(1).Info("GRPC expander chosen")
+			filters = append(filters, grpcplugin.NewFilter(grpcOpts))
 		default:
 			return nil, errors.NewAutoscalerError(errors.InternalError, "Expander %s not supported", expanderFlag)
 		}
 		if _, ok := filters[len(filters)-1].(expander.Strategy); ok {
 			strategySeen = true
-    }
-  }
-  return newChainStrategy(filters, random.NewStrategy()), nil
+		}
+	}
+	return newChainStrategy(filters, random.NewStrategy()), nil
 }

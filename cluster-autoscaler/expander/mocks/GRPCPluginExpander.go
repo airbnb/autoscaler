@@ -5,12 +5,12 @@
 package mocks
 
 import (
-  context "context"
-  reflect "reflect"
+	context "context"
+	reflect "reflect"
 
-  gomock "github.com/golang/mock/gomock"
-  grpc "google.golang.org/grpc"
-  "k8s.io/autoscaler/cluster-autoscaler/expander/grpcplugin/protos"
+	gomock "github.com/golang/mock/gomock"
+	grpc "google.golang.org/grpc"
+	"k8s.io/autoscaler/cluster-autoscaler/expander/grpcplugin/protos"
 )
 
 // MockExpanderClient is a mock of ExpanderClient interface.

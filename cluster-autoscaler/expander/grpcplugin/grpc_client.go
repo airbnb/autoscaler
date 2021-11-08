@@ -1,129 +1,129 @@
 package grpcplugin
 
 import (
-  "context"
-  "log"
-  "time"
+	"context"
+	"log"
+	"time"
 
-  v1 "k8s.io/api/core/v1"
-  "k8s.io/autoscaler/cluster-autoscaler/expander"
-  "k8s.io/autoscaler/cluster-autoscaler/expander/grpcplugin/protos"
-  "k8s.io/klog/v2"
-  schedulerframework "k8s.io/kubernetes/pkg/scheduler/framework"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/autoscaler/cluster-autoscaler/expander"
+	"k8s.io/autoscaler/cluster-autoscaler/expander/grpcplugin/protos"
+	"k8s.io/klog/v2"
+	schedulerframework "k8s.io/kubernetes/pkg/scheduler/framework"
 
-  "google.golang.org/grpc"
-  "google.golang.org/grpc/credentials"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 type grpcclientstrategy struct {
-  grpcClient protos.ExpanderClient
+	grpcClient protos.ExpanderClient
 }
 
 type GRPCOpts struct {
-  GRPCExpanderCert string
-  GRPCExpanderUrl string
+	GRPCExpanderCert string
+	GRPCExpanderUrl  string
 }
 
 // NewFilter returns an expansion filter that creates a gRPC client, and calls out to a gRPC server
 func NewFilter(opts GRPCOpts) expander.Filter {
-  client := createGRPCClient(opts)
-  if client == nil {
-    return &grpcclientstrategy{grpcClient: nil}
-  }
-  return &grpcclientstrategy{grpcClient: client}
+	client := createGRPCClient(opts)
+	if client == nil {
+		return &grpcclientstrategy{grpcClient: nil}
+	}
+	return &grpcclientstrategy{grpcClient: client}
 }
 
 func createGRPCClient(opts GRPCOpts) protos.ExpanderClient {
-  var dialOpt grpc.DialOption
+	var dialOpt grpc.DialOption
 
-  // if no Cert file specified, use insecure
-  if opts.GRPCExpanderCert == "" {
-    dialOpt = grpc.WithInsecure()
-  } else {
-    creds, err := credentials.NewClientTLSFromFile(opts.GRPCExpanderCert, "")
-    if err != nil {
-      log.Fatalf("Failed to create TLS credentials %v", err)
-      return nil
-    }
-    dialOpt = grpc.WithTransportCredentials(creds)
-  }
-  klog.V(1).Info("Dialing ", opts.GRPCExpanderUrl, " dialopt: ", dialOpt)
-  conn, err := grpc.Dial(opts.GRPCExpanderUrl, dialOpt)
-  if err != nil {
-    log.Fatalf("fail to dial server: %v", err)
-    return nil
-  }
-  return protos.NewExpanderClient(conn)
+	// if no Cert file specified, use insecure
+	if opts.GRPCExpanderCert == "" {
+		dialOpt = grpc.WithInsecure()
+	} else {
+		creds, err := credentials.NewClientTLSFromFile(opts.GRPCExpanderCert, "")
+		if err != nil {
+			log.Fatalf("Failed to create TLS credentials %v", err)
+			return nil
+		}
+		dialOpt = grpc.WithTransportCredentials(creds)
+	}
+	klog.V(2).Info("Dialing ", opts.GRPCExpanderUrl, " dialopt: ", dialOpt)
+	conn, err := grpc.Dial(opts.GRPCExpanderUrl, dialOpt)
+	if err != nil {
+		log.Fatalf("fail to dial server: %v", err)
+		return nil
+	}
+	return protos.NewExpanderClient(conn)
 }
 
 func (g *grpcclientstrategy) BestOptions(expansionOptions []expander.Option, nodeInfo map[string]*schedulerframework.NodeInfo) []expander.Option {
-  if g.grpcClient == nil {
-    log.Fatalf("Incorrect gRPC client config, filtering no options")
-    return expansionOptions
-  }
+	if g.grpcClient == nil {
+		log.Fatalf("Incorrect gRPC client config, filtering no options")
+		return expansionOptions
+	}
 
-  // Transform inputs to gRPC inputs
-  nodeGroupIDOptionMap := make(map[string]expander.Option)
-  grpcOptionsSlice := []*protos.Option{}
-  populateOptionsForGRPC(expansionOptions, nodeGroupIDOptionMap, &grpcOptionsSlice)
-  grpcNodeInfoMap := make(map[string]*v1.Node)
-  populateNodeInfoForGRPC(nodeInfo, grpcNodeInfoMap)
+	// Transform inputs to gRPC inputs
+	nodeGroupIDOptionMap := make(map[string]expander.Option)
+	grpcOptionsSlice := []*protos.Option{}
+	populateOptionsForGRPC(expansionOptions, nodeGroupIDOptionMap, &grpcOptionsSlice)
+	grpcNodeInfoMap := make(map[string]*v1.Node)
+	populateNodeInfoForGRPC(nodeInfo, grpcNodeInfoMap)
 
-  // call gRPC server to get BestOption
-  klog.V(1).Info("GPRC call of best options to server with ", len(nodeGroupIDOptionMap), " options")
-  ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-  defer cancel()
-  bestOptionsResponse, err := g.grpcClient.BestOptions(ctx, &protos.BestOptionsRequest{Options: grpcOptionsSlice, NodeInfoMap: grpcNodeInfoMap})
-  if err != nil {
-    klog.V(1).Info("GRPC call timed out, no options filtered")
-    return expansionOptions
-  }
+	// call gRPC server to get BestOption
+	klog.V(2).Info("GPRC call of best options to server with ", len(nodeGroupIDOptionMap), " options")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	bestOptionsResponse, err := g.grpcClient.BestOptions(ctx, &protos.BestOptionsRequest{Options: grpcOptionsSlice, NodeInfoMap: grpcNodeInfoMap})
+	if err != nil {
+		klog.V(2).Info("GRPC call timed out, no options filtered")
+		return expansionOptions
+	}
 
-  if bestOptionsResponse == nil || bestOptionsResponse.Options == nil {
-    klog.V(1).Info("GRPC returned nil bestOptions, no options filtered")
-    return expansionOptions
-  }
-  // Transform back options slice
-  options := transformAndSanitizeOptionsFromGRPC(bestOptionsResponse.Options, nodeGroupIDOptionMap)
-  if options == nil {
-    klog.V(1).Info("Unable to sanitize GPRC returned bestOptions, no options filtered")
-    return expansionOptions
-  }
-  return options
+	if bestOptionsResponse == nil || bestOptionsResponse.Options == nil {
+		klog.V(2).Info("GRPC returned nil bestOptions, no options filtered")
+		return expansionOptions
+	}
+	// Transform back options slice
+	options := transformAndSanitizeOptionsFromGRPC(bestOptionsResponse.Options, nodeGroupIDOptionMap)
+	if options == nil {
+		klog.V(2).Info("Unable to sanitize GPRC returned bestOptions, no options filtered")
+		return expansionOptions
+	}
+	return options
 }
 
 // populateOptionsForGRPC creates a map of nodegroup ID and options, as well as a slice of Options objects for the gRPC call
 func populateOptionsForGRPC(expansionOptions []expander.Option, nodeGroupIDOptionMap map[string]expander.Option, grpcOptionsSlice *[]*protos.Option) {
-  for _, option := range expansionOptions {
-    nodeGroupIDOptionMap[option.NodeGroup.Id()] = option
-    *grpcOptionsSlice = append(*grpcOptionsSlice, newOptionMessage(option.NodeGroup.Id(), int32(option.NodeCount), option.Debug, option.Pods))
-  }
+	for _, option := range expansionOptions {
+		nodeGroupIDOptionMap[option.NodeGroup.Id()] = option
+		*grpcOptionsSlice = append(*grpcOptionsSlice, newOptionMessage(option.NodeGroup.Id(), int32(option.NodeCount), option.Debug, option.Pods))
+	}
 }
 
 // populateNodeInfoForGRPC modifies the nodeInfo object, and replaces it with the v1.Node to pass through grpc
 func populateNodeInfoForGRPC(nodeInfos map[string]*schedulerframework.NodeInfo, grpcNodeInfoMap map[string]*v1.Node) {
-  for nodeId, nodeInfo := range nodeInfos {
-    grpcNodeInfoMap[nodeId] = nodeInfo.Node()
-  }
+	for nodeId, nodeInfo := range nodeInfos {
+		grpcNodeInfoMap[nodeId] = nodeInfo.Node()
+	}
 }
 
-func transformAndSanitizeOptionsFromGRPC(bestOptionsResponseOptions []*protos.Option, nodeGroupIDOptionMap map[string]expander.Option) ([]expander.Option) {
-  var options []expander.Option
-  for _, option := range bestOptionsResponseOptions {
-    if option == nil {
-      klog.Errorf("gRPC server returned nil Option")
-      return  nil
-    }
-    if _, ok := nodeGroupIDOptionMap[option.NodeGroupId]; ok {
-      options = append(options, nodeGroupIDOptionMap[option.NodeGroupId])
-    } else {
-      klog.Errorf("gRPC server returned invalid nodeGroup ID: ", option.NodeGroupId)
-      return nil
-    }
-  }
-  return options
+func transformAndSanitizeOptionsFromGRPC(bestOptionsResponseOptions []*protos.Option, nodeGroupIDOptionMap map[string]expander.Option) []expander.Option {
+	var options []expander.Option
+	for _, option := range bestOptionsResponseOptions {
+		if option == nil {
+			klog.Errorf("gRPC server returned nil Option")
+			return nil
+		}
+		if _, ok := nodeGroupIDOptionMap[option.NodeGroupId]; ok {
+			options = append(options, nodeGroupIDOptionMap[option.NodeGroupId])
+		} else {
+			klog.Errorf("gRPC server returned invalid nodeGroup ID: ", option.NodeGroupId)
+			return nil
+		}
+	}
+	return options
 }
 
 func newOptionMessage(nodeGroupId string, nodeCount int32, debug string, pods []*v1.Pod) *protos.Option {
-  return &protos.Option{NodeGroupId: nodeGroupId, NodeCount: nodeCount, Debug: debug, Pod: pods}
+	return &protos.Option{NodeGroupId: nodeGroupId, NodeCount: nodeCount, Debug: debug, Pod: pods}
 }

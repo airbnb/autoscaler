@@ -28,8 +28,8 @@ import (
 	"k8s.io/autoscaler/cluster-autoscaler/estimator"
 	"k8s.io/autoscaler/cluster-autoscaler/expander"
 	"k8s.io/autoscaler/cluster-autoscaler/expander/factory"
-  "k8s.io/autoscaler/cluster-autoscaler/expander/grpcplugin"
-  ca_processors "k8s.io/autoscaler/cluster-autoscaler/processors"
+	"k8s.io/autoscaler/cluster-autoscaler/expander/grpcplugin"
+	ca_processors "k8s.io/autoscaler/cluster-autoscaler/processors"
 	"k8s.io/autoscaler/cluster-autoscaler/simulator"
 	"k8s.io/autoscaler/cluster-autoscaler/utils/backoff"
 	"k8s.io/autoscaler/cluster-autoscaler/utils/errors"
@@ -49,7 +49,7 @@ type AutoscalerOptions struct {
 	EstimatorBuilder       estimator.EstimatorBuilder
 	Processors             *ca_processors.AutoscalingProcessors
 	Backoff                backoff.Backoff
-  GRPCOpts               grpcplugin.GRPCOpts
+	GRPCOpts               grpcplugin.GRPCOpts
 }
 
 // Autoscaler is the main component of CA which scales up/down node groups according to its configuration
@@ -103,12 +103,12 @@ func initializeDefaultOptions(opts *AutoscalerOptions) error {
 	if opts.CloudProvider == nil {
 		opts.CloudProvider = cloudBuilder.NewCloudProvider(opts.AutoscalingOptions)
 	}
-  if strings.Contains(opts.ExpanderNames, expander.GRPCExpanderName) && opts.GRPCExpanderURL != "" && opts.GRPCExpanderCert != "" {
-    opts.GRPCOpts = grpcplugin.GRPCOpts{opts.GRPCExpanderCert, opts.GRPCExpanderURL}
-  }
+	if strings.Contains(opts.ExpanderNames, expander.GRPCExpanderName) && opts.GRPCExpanderURL != "" && opts.GRPCExpanderCert != "" {
+		opts.GRPCOpts = grpcplugin.GRPCOpts{opts.GRPCExpanderCert, opts.GRPCExpanderURL}
+	}
 	if opts.ExpanderStrategy == nil {
 		expanderStrategy, err := factory.ExpanderStrategyFromStrings(strings.Split(opts.ExpanderNames, ","), opts.GRPCOpts, opts.CloudProvider,
-      opts.AutoscalingKubeClients, opts.KubeClient, opts.ConfigNamespace)
+			opts.AutoscalingKubeClients, opts.KubeClient, opts.ConfigNamespace)
 		if err != nil {
 			return err
 		}
