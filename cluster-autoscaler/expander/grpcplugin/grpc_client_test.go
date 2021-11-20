@@ -44,25 +44,25 @@ var (
 	}
 	options = []expander.Option{eoT2Micro, eoT2Large, eoT3Large, eoM44XLarge}
 
-	grpc_eoT2Micro = protos.Option{
+	grpcEoT2Micro = protos.Option{
 		NodeGroupId: eoT2Micro.NodeGroup.Id(),
 		NodeCount:   int32(eoT2Micro.NodeCount),
 		Debug:       eoT2Micro.Debug,
 		Pod:         eoT2Micro.Pods,
 	}
-	grpc_eoT2Large = protos.Option{
+  grpcEoT2Large = protos.Option{
 		NodeGroupId: eoT2Large.NodeGroup.Id(),
 		NodeCount:   int32(eoT2Large.NodeCount),
 		Debug:       eoT2Large.Debug,
 		Pod:         eoT2Large.Pods,
 	}
-	grpc_eoT3Large = protos.Option{
+	grpcEoT3Large = protos.Option{
 		NodeGroupId: eoT3Large.NodeGroup.Id(),
 		NodeCount:   int32(eoT3Large.NodeCount),
 		Debug:       eoT3Large.Debug,
 		Pod:         eoT3Large.Pods,
 	}
-	grpc_eoM44XLarge = protos.Option{
+	grpcEoM44XLarge = protos.Option{
 		NodeGroupId: eoM44XLarge.NodeGroup.Id(),
 		NodeCount:   int32(eoM44XLarge.NodeCount),
 		Debug:       eoM44XLarge.Debug,
@@ -75,7 +75,7 @@ func TestPopulateOptionsForGrpc(t *testing.T) {
 	grpcOptionsSlice := []*protos.Option{}
 	populateOptionsForGRPC(options, nodeGroupIDOptionMap, &grpcOptionsSlice)
 
-	expectedOptionsSlice := []*protos.Option{&grpc_eoT2Micro, &grpc_eoT2Large, &grpc_eoT3Large, &grpc_eoM44XLarge}
+	expectedOptionsSlice := []*protos.Option{&grpcEoT2Micro, &grpcEoT2Large, &grpcEoT3Large, &grpcEoM44XLarge}
 	assert.Equal(t, expectedOptionsSlice, grpcOptionsSlice)
 
 	expectedNodeGroupIDOptionMap := map[string]expander.Option{
@@ -110,7 +110,7 @@ func TestPopulateNodeInfoForGRPC(t *testing.T) {
 }
 
 func TestValidTransformAndSanitizeOptionsFromGRPC(t *testing.T) {
-	responseOptionsSlice := []*protos.Option{&grpc_eoT2Micro, &grpc_eoT3Large, &grpc_eoM44XLarge}
+	responseOptionsSlice := []*protos.Option{&grpcEoT2Micro, &grpcEoT3Large, &grpcEoM44XLarge}
 	nodeGroupIDOptionMap := map[string]expander.Option{
 		eoT2Micro.NodeGroup.Id():   eoT2Micro,
 		eoT2Large.NodeGroup.Id():   eoT2Large,
@@ -125,7 +125,7 @@ func TestValidTransformAndSanitizeOptionsFromGRPC(t *testing.T) {
 }
 
 func TestInvalidTransformAndSanitizeOptionsFromGRPC(t *testing.T) {
-	responseOptionsSlice := []*protos.Option{&grpc_eoT2Micro, &grpc_eoT3Large, &grpc_eoM44XLarge}
+	responseOptionsSlice := []*protos.Option{&grpcEoT2Micro, &grpcEoT3Large, &grpcEoM44XLarge}
 	nodeGroupIDOptionMap := map[string]expander.Option{
 		eoT2Micro.NodeGroup.Id(): eoT2Micro,
 		eoT2Large.NodeGroup.Id(): eoT2Large,
@@ -148,13 +148,13 @@ func TestBestOptionsValid(t *testing.T) {
 		grpcNodeInfoMap[opt.NodeGroup.Id()] = nodes[i]
 	}
 	expectedBestOptionsReq := &protos.BestOptionsRequest{
-		Options:     []*protos.Option{&grpc_eoT2Micro, &grpc_eoT2Large, &grpc_eoT3Large, &grpc_eoM44XLarge},
+		Options:     []*protos.Option{&grpcEoT2Micro, &grpcEoT2Large, &grpcEoT3Large, &grpcEoM44XLarge},
 		NodeInfoMap: grpcNodeInfoMap,
 	}
 
 	mockClient.EXPECT().BestOptions(
 		gomock.Any(), gomock.Eq(expectedBestOptionsReq),
-	).Return(&protos.BestOptionsResponse{Options: []*protos.Option{&grpc_eoT3Large}}, nil)
+	).Return(&protos.BestOptionsResponse{Options: []*protos.Option{&grpcEoT3Large}}, nil)
 
 	resp := g.BestOptions(options, nodeInfos)
 
@@ -214,14 +214,14 @@ func TestBestOptionsErrors(t *testing.T) {
 			desc:         "bad bestOptions response, options invalid - nil",
 			client:       g,
 			nodeInfo:     makeFakeNodeInfos(),
-			mockResponse: protos.BestOptionsResponse{Options: []*protos.Option{&grpc_eoT2Micro, nil, &grpc_eoT2Large, &grpc_eoT3Large, &grpc_eoM44XLarge}},
+			mockResponse: protos.BestOptionsResponse{Options: []*protos.Option{&grpcEoT2Micro, nil, &grpcEoT2Large, &grpcEoT3Large, &grpcEoM44XLarge}},
 			errResponse:  nil,
 		},
 		{
 			desc:         "bad bestOptions response, options invalid - nonExistent nodeID",
 			client:       g,
 			nodeInfo:     makeFakeNodeInfos(),
-			mockResponse: protos.BestOptionsResponse{Options: []*protos.Option{&grpc_eoT2Micro, &badProtosOption, &grpc_eoT2Large, &grpc_eoT3Large, &grpc_eoM44XLarge}},
+			mockResponse: protos.BestOptionsResponse{Options: []*protos.Option{&grpcEoT2Micro, &badProtosOption, &grpcEoT2Large, &grpcEoT3Large, &grpcEoM44XLarge}},
 			errResponse:  nil,
 		},
 	}
@@ -231,7 +231,7 @@ func TestBestOptionsErrors(t *testing.T) {
 		mockClient.EXPECT().BestOptions(
 			gomock.Any(), gomock.Eq(
 				&protos.BestOptionsRequest{
-					Options:     []*protos.Option{&grpc_eoT2Micro, &grpc_eoT2Large, &grpc_eoT3Large, &grpc_eoM44XLarge},
+					Options:     []*protos.Option{&grpcEoT2Micro, &grpcEoT2Large, &grpcEoT3Large, &grpcEoM44XLarge},
 					NodeInfoMap: grpcNodeInfoMap,
 				})).Return(&tc.mockResponse, tc.errResponse)
 		resp := g.BestOptions(options, tc.nodeInfo)
