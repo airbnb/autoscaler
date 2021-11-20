@@ -18,8 +18,8 @@ package factory
 
 import (
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider"
-	"k8s.io/autoscaler/cluster-autoscaler/context"
-	"k8s.io/autoscaler/cluster-autoscaler/expander"
+  "k8s.io/autoscaler/cluster-autoscaler/context"
+  "k8s.io/autoscaler/cluster-autoscaler/expander"
 	"k8s.io/autoscaler/cluster-autoscaler/expander/grpcplugin"
 	"k8s.io/autoscaler/cluster-autoscaler/expander/mostpods"
 	"k8s.io/autoscaler/cluster-autoscaler/expander/price"
@@ -34,9 +34,10 @@ import (
 )
 
 // ExpanderStrategyFromStrings creates an expander.Strategy according to the names of the expanders passed in
-func ExpanderStrategyFromStrings(expanderFlags []string, grpcOpts grpcplugin.GRPCOpts, cloudProvider cloudprovider.CloudProvider,
+// take in whole opts and access stuff here
+func ExpanderStrategyFromStrings(expanderFlags []string, cloudProvider cloudprovider.CloudProvider,
 	autoscalingKubeClients *context.AutoscalingKubeClients, kubeClient kube_client.Interface,
-	configNamespace string) (expander.Strategy, errors.AutoscalerError) {
+	configNamespace string, GRPCExpanderCert string, GRPCExpanderURL string) (expander.Strategy, errors.AutoscalerError) {
 	var filters []expander.Filter
 	seenExpanders := map[string]struct{}{}
 	strategySeen := false
@@ -71,7 +72,7 @@ func ExpanderStrategyFromStrings(expanderFlags []string, grpcOpts grpcplugin.GRP
 			filters = append(filters, priority.NewFilter(lister.ConfigMaps(configNamespace), autoscalingKubeClients.Recorder))
 		case expander.GRPCExpanderName:
 			klog.V(1).Info("GRPC expander chosen")
-			filters = append(filters, grpcplugin.NewFilter(grpcOpts))
+			filters = append(filters, grpcplugin.NewFilter(GRPCExpanderCert, GRPCExpanderURL))
 		default:
 			return nil, errors.NewAutoscalerError(errors.InternalError, "Expander %s not supported", expanderFlag)
 		}

@@ -19,36 +19,31 @@ type grpcclientstrategy struct {
 	grpcClient protos.ExpanderClient
 }
 
-type GRPCOpts struct {
-	GRPCExpanderCert string
-	GRPCExpanderUrl  string
-}
-
 // NewFilter returns an expansion filter that creates a gRPC client, and calls out to a gRPC server
-func NewFilter(opts GRPCOpts) expander.Filter {
-	client := createGRPCClient(opts)
+func NewFilter(expanderCert string, expanderUrl string) expander.Filter {
+	client := createGRPCClient(expanderCert, expanderUrl)
 	if client == nil {
 		return &grpcclientstrategy{grpcClient: nil}
 	}
 	return &grpcclientstrategy{grpcClient: client}
 }
 
-func createGRPCClient(opts GRPCOpts) protos.ExpanderClient {
+func createGRPCClient(expanderCert string, expanderUrl string) protos.ExpanderClient {
 	var dialOpt grpc.DialOption
 
 	// if no Cert file specified, use insecure
-	if opts.GRPCExpanderCert == "" {
+	if expanderCert == "" {
 		dialOpt = grpc.WithInsecure()
 	} else {
-		creds, err := credentials.NewClientTLSFromFile(opts.GRPCExpanderCert, "")
+		creds, err := credentials.NewClientTLSFromFile(expanderCert, "")
 		if err != nil {
 			log.Fatalf("Failed to create TLS credentials %v", err)
 			return nil
 		}
 		dialOpt = grpc.WithTransportCredentials(creds)
 	}
-	klog.V(2).Info("Dialing ", opts.GRPCExpanderUrl, " dialopt: ", dialOpt)
-	conn, err := grpc.Dial(opts.GRPCExpanderUrl, dialOpt)
+	klog.V(2).Info("Dialing ", expanderUrl, " dialopt: ", dialOpt)
+	conn, err := grpc.Dial(expanderUrl, dialOpt)
 	if err != nil {
 		log.Fatalf("fail to dial server: %v", err)
 		return nil
