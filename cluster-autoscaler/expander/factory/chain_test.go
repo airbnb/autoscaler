@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	schedulerframework "k8s.io/kubernetes/pkg/scheduler/framework"
+	schedulernodeinfo "k8s.io/kubernetes/pkg/scheduler/nodeinfo"
 )
 
 type substringTestFilterStrategy struct {
@@ -35,7 +35,7 @@ func newSubstringTestFilterStrategy(substring string) *substringTestFilterStrate
 	}
 }
 
-func (s *substringTestFilterStrategy) BestOptions(expansionOptions []expander.Option, nodeInfo map[string]*schedulerframework.NodeInfo) []expander.Option {
+func (s *substringTestFilterStrategy) BestOptions(expansionOptions []expander.Option, nodeInfo map[string]*schedulernodeinfo.NodeInfo) []expander.Option {
 	var ret []expander.Option
 	for _, option := range expansionOptions {
 		if strings.Contains(option.Debug, s.substring) {
@@ -46,7 +46,7 @@ func (s *substringTestFilterStrategy) BestOptions(expansionOptions []expander.Op
 
 }
 
-func (s *substringTestFilterStrategy) BestOption(expansionOptions []expander.Option, nodeInfo map[string]*schedulerframework.NodeInfo) *expander.Option {
+func (s *substringTestFilterStrategy) BestOption(expansionOptions []expander.Option, nodeInfo map[string]*schedulernodeinfo.NodeInfo) *expander.Option {
 	ret := s.BestOptions(expansionOptions, nodeInfo)
 	if len(ret) == 0 {
 		return nil
