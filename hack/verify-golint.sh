@@ -27,6 +27,7 @@ excluded_packages=(
   'vertical-pod-autoscaler/pkg/client'
   'cluster-autoscaler/cloudprovider/magnum/gophercloud'
   'cluster-autoscaler/cloudprovider/digitalocean/godo'
+  'cluster-autoscaler/expander/grpcplugin/protos'
 )
 
 FIND_PACKAGES='go list ./... '
