@@ -221,11 +221,11 @@
     "golang.org/x/net/http2",
     "google.golang.org/api/support/bundler",
     "google.golang.org/grpc",
-    "google.golang.org/grpc/codes",
-    "google.golang.org/grpc/grpclog",
-    "google.golang.org/grpc/metadata",
-    "google.golang.org/grpc/stats",
-    "google.golang.org/grpc/status",
+    "google.golang.org/grpc-old/codes",
+    "google.golang.org/grpc-old/grpclog",
+    "google.golang.org/grpc-old/metadata",
+    "google.golang.org/grpc-old/stats",
+    "google.golang.org/grpc-old/status",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

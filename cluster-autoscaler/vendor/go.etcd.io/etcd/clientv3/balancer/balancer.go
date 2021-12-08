@@ -24,11 +24,11 @@ import (
 	"go.etcd.io/etcd/clientv3/balancer/picker"
 
 	"go.uber.org/zap"
-	"google.golang.org/grpc/balancer"
-	grpcconnectivity "google.golang.org/grpc/connectivity"
-	"google.golang.org/grpc/resolver"
-	_ "google.golang.org/grpc/resolver/dns"         // register DNS resolver
-	_ "google.golang.org/grpc/resolver/passthrough" // register passthrough resolver
+	"google.golang.org/grpc-old/balancer"
+	grpcconnectivity "google.golang.org/grpc-old/connectivity"
+	"google.golang.org/grpc-old/resolver"
+	_ "google.golang.org/grpc-old/resolver/dns"         // register DNS resolver
+	_ "google.golang.org/grpc-old/resolver/passthrough" // register passthrough resolver
 )
 
 // Config defines balancer configurations.

@@ -23,8 +23,8 @@ import (
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
 	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
+	codes "google.golang.org/grpc-old/codes"
+	status "google.golang.org/grpc-old/status"
 	math "math"
 )
 

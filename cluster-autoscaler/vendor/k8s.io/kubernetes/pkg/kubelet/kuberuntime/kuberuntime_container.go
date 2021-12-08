@@ -31,7 +31,7 @@ import (
 	"sync"
 	"time"
 
-	grpcstatus "google.golang.org/grpc/status"
+	grpcstatus "google.golang.org/grpc-old/status"
 
 	"github.com/armon/circbuf"
 	"k8s.io/klog"

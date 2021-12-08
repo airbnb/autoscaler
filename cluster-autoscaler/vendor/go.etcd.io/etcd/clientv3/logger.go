@@ -20,7 +20,7 @@ import (
 
 	"go.etcd.io/etcd/pkg/logutil"
 
-	"google.golang.org/grpc/grpclog"
+	"google.golang.org/grpc-old/grpclog"
 )
 
 var (

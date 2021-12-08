@@ -6,8 +6,8 @@ import (
 	prom "github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"google.golang.org/grpc-old/codes"
+	"google.golang.org/grpc-old/status"
 )
 
 // ClientMetrics represents a collection of metrics to be registered on a

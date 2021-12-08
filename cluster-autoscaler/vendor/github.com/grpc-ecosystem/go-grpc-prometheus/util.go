@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc-old/codes"
 )
 
 type grpcType string

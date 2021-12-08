@@ -20,8 +20,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"google.golang.org/grpc/codes"
-	grpcstatus "google.golang.org/grpc/status"
+	"google.golang.org/grpc-old/codes"
+	grpcstatus "google.golang.org/grpc-old/status"
 )
 
 // NewErrorStreamingDisabled creates an error for disabled streaming method.

@@ -28,8 +28,8 @@ import (
 	"strings"
 	"time"
 
-	grpccodes "google.golang.org/grpc/codes"
-	grpcstatus "google.golang.org/grpc/status"
+	grpccodes "google.golang.org/grpc-old/codes"
+	grpcstatus "google.golang.org/grpc-old/status"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
