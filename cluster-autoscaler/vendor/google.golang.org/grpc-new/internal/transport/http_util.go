@@ -33,10 +33,10 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf-new/proto"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/hpack"
-	spb "google.golang.org/genproto/googleapis/rpc/status"
+	spb "google.golang.org/genproto-new/googleapis/rpc/status"
 	"google.golang.org/grpc-new/codes"
 	"google.golang.org/grpc-new/grpclog"
 	"google.golang.org/grpc-new/status"

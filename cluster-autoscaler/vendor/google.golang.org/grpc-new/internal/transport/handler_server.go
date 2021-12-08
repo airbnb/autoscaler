@@ -35,7 +35,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf-new/proto"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc-new/codes"
 	"google.golang.org/grpc-new/credentials"

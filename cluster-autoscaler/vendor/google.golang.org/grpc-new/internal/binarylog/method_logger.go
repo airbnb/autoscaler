@@ -24,8 +24,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf-new/proto"
+	"github.com/golang/protobuf-new/ptypes"
 	pb "google.golang.org/grpc-new/binarylog/grpc_binarylog_v1"
 	"google.golang.org/grpc-new/metadata"
 	"google.golang.org/grpc-new/status"

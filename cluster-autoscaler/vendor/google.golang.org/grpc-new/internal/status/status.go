@@ -31,9 +31,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
-	spb "google.golang.org/genproto/googleapis/rpc/status"
+	"github.com/golang/protobuf-new/proto"
+	"github.com/golang/protobuf-new/ptypes"
+	spb "google.golang.org/genproto-new/googleapis/rpc/status"
 	"google.golang.org/grpc-new/codes"
 )
 

@@ -99,7 +99,7 @@ require (
 Update the `proto` package, gRPC package, and rebuild the `.proto` files:
 
 ```sh
-go get -u github.com/golang/protobuf/{proto,protoc-gen-go}
+go get -u github.com/golang/protobuf-new/{proto,protoc-gen-go}
 go get -u google.golang.org/grpc-new
 protoc --go_out=plugins=grpc:. *.proto
 ```

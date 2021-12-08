@@ -28,6 +28,11 @@ require (
 	google.golang.org/grpc-new v1.40.0
 	google.golang.org/protobuf-new v1.27.1
 	//github.com/golang/protobuf-new
+	// from master go sum: github.com/golang/protobuf v1.4.0/go.mod h1:jodUvKwWbYaEsadDk5Fwe5c77LiNKVO9IDvqG2KuDX0=
+	// google.golang.org/genproto
+	// from master go sum:
+	//google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c h1:wtujag7C+4D6KMoulW9YauvK2lgdvCMS260jsqqBXr0=
+    //google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c/go.mod h1:UODoCrxHCcBojKKwX1terBiRUaqAsFqJiF615XL43r0=
 	gopkg.in/gcfg.v1 v1.2.0
 	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.0.0

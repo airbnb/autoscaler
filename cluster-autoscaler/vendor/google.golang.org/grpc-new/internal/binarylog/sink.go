@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf-new/proto"
 	pb "google.golang.org/grpc-new/binarylog/grpc_binarylog_v1"
 )
 

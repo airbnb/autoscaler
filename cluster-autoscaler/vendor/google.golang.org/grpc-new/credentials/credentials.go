@@ -28,7 +28,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf-new/proto"
 	"google.golang.org/grpc-new/attributes"
 	icredentials "google.golang.org/grpc-new/internal/credentials"
 )

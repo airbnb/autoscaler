@@ -31,7 +31,7 @@ import (
 	"context"
 	"fmt"
 
-	spb "google.golang.org/genproto/googleapis/rpc/status"
+	spb "google.golang.org/genproto-new/googleapis/rpc/status"
 
 	"google.golang.org/grpc-new/codes"
 	"google.golang.org/grpc-new/internal/status"
