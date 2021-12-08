@@ -21,11 +21,11 @@ import (
 	reflect "reflect"
 	sync "sync"
 
-	grpc "google.golang.org/grpc-new"
-	codes "google.golang.org/grpc-new/codes"
-	status "google.golang.org/grpc-new/status"
-	protoreflect "google.golang.org/protobuf-new/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf-new/runtime/protoimpl"
+	grpc "google.golang.org/grpc/v2"
+	codes "google.golang.org/grpc/v2/codes"
+	status "google.golang.org/grpc/v2/status"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	v1 "k8s.io/api/core/v1"
 )
 
