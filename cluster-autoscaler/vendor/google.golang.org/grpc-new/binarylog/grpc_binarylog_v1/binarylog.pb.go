@@ -25,7 +25,7 @@
 package grpc_binarylog_v1
 
 import (
-	proto "github.com/golang/protobuf/proto"
+	proto "github.com/golang/protobuf-new/proto"
 	protoreflect "google.golang.org/protobuf-new/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf-new/runtime/protoimpl"
 	durationpb "google.golang.org/protobuf-new/types/known/durationpb"

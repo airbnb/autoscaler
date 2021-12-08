@@ -27,6 +27,7 @@ require (
 	google.golang.org/api v0.6.1-0.20190607001116-5213b8090861
 	google.golang.org/grpc-new v1.40.0
 	google.golang.org/protobuf-new v1.27.1
+	//github.com/golang/protobuf-new
 	gopkg.in/gcfg.v1 v1.2.0
 	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.0.0
