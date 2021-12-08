@@ -176,6 +176,7 @@ replace (
 	github.com/golang/mock => github.com/golang/mock v1.3.1
 	github.com/golang/protobuf => github.com/golang/protobuf v1.3.2
 	google.golang.org/protobuf-new => google.golang.org/protobuf v1.27.1
+
 	google.golang.org/grpc-new => google.golang.org/grpc v1.40.0
 	github.com/golangci/check => github.com/golangci/check v0.0.0-20180506172741-cfe4005ccda2
 	github.com/golangci/dupl => github.com/golangci/dupl v0.0.0-20180902072040-3e9179ac440a

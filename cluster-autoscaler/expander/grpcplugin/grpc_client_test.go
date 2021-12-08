@@ -26,7 +26,7 @@ import (
 	"k8s.io/autoscaler/cluster-autoscaler/expander/grpcplugin/protos"
 	"k8s.io/autoscaler/cluster-autoscaler/expander/mocks"
 	. "k8s.io/autoscaler/cluster-autoscaler/utils/test"
-  schedulernodeinfo "k8s.io/kubernetes/pkg/scheduler/nodeinfo"
+	schedulernodeinfo "k8s.io/kubernetes/pkg/scheduler/nodeinfo"
 
 	"k8s.io/autoscaler/cluster-autoscaler/cloudprovider/test"
 	"k8s.io/autoscaler/cluster-autoscaler/expander"

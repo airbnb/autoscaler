@@ -17,17 +17,17 @@ limitations under the License.
 package grpcplugin
 
 import (
-  "context"
-  "log"
-  "time"
+	"context"
+	"log"
+	"time"
 
-  grpc "google.golang.org/grpc-new"
-  credentials "google.golang.org/grpc-new/credentials"
-  v1 "k8s.io/api/core/v1"
-  "k8s.io/autoscaler/cluster-autoscaler/expander"
-  "k8s.io/autoscaler/cluster-autoscaler/expander/grpcplugin/protos"
-  "k8s.io/klog"
-  schedulernodeinfo "k8s.io/kubernetes/pkg/scheduler/nodeinfo"
+	grpc "google.golang.org/grpc-new"
+	credentials "google.golang.org/grpc-new/credentials"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/autoscaler/cluster-autoscaler/expander"
+	"k8s.io/autoscaler/cluster-autoscaler/expander/grpcplugin/protos"
+	"k8s.io/klog"
+	schedulernodeinfo "k8s.io/kubernetes/pkg/scheduler/nodeinfo"
 )
 
 type grpcclientstrategy struct {

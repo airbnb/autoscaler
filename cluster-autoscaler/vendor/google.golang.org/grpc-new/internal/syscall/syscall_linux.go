@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"golang.org/x/sys/unix"
-	"-new/grpclog"
+	"google.golang.org/grpc-new/grpclog"
 )
 
 var logger = grpclog.Component("core")
