@@ -233,14 +233,11 @@ github.com/gogo/protobuf/types
 github.com/golang/groupcache/lru
 # github.com/golang/mock v1.3.1 => github.com/golang/mock v1.3.1
 github.com/golang/mock/gomock
-<<<<<<< HEAD
 # github.com/golang/protobuf v1.3.2 => github.com/golang/protobuf v1.3.2
-=======
 github.com/golang/mock/mockgen/model
 # github.com/golang/protobuf v1.5.2
 github.com/golang/protobuf/descriptor
 github.com/golang/protobuf/jsonpb
->>>>>>> c147ba9a2 (Merge pull request #3 from airbnb/es--grpc-expander-plugin)
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/protoc-gen-go/descriptor
 github.com/golang/protobuf/ptypes
@@ -635,54 +632,48 @@ google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
 # google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55 => google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
 google.golang.org/genproto/googleapis/rpc/status
-<<<<<<< HEAD
 # google.golang.org/grpc v1.26.0 => google.golang.org/grpc v1.26.0
-=======
 google.golang.org/genproto/protobuf/field_mask
 # google.golang.org/grpc v1.40.0
 ## explicit
->>>>>>> c147ba9a2 (Merge pull request #3 from airbnb/es--grpc-expander-plugin)
 google.golang.org/grpc
-google.golang.org/grpc-old/attributes
-google.golang.org/grpc-old/backoff
-google.golang.org/grpc-old/balancer
-google.golang.org/grpc-old/balancer/base
-google.golang.org/grpc-old/balancer/roundrobin
-google.golang.org/grpc-old/binarylog/grpc_binarylog_v1
-google.golang.org/grpc-old/codes
-google.golang.org/grpc-old/connectivity
-google.golang.org/grpc-old/credentials
-google.golang.org/grpc-old/credentials/internal
-google.golang.org/grpc-old/encoding
-google.golang.org/grpc-old/encoding/proto
-google.golang.org/grpc-old/grpclog
-google.golang.org/grpc-old/internal
-google.golang.org/grpc-old/internal/backoff
-google.golang.org/grpc-old/internal/balancerload
-google.golang.org/grpc-old/internal/binarylog
-google.golang.org/grpc-old/internal/buffer
-google.golang.org/grpc-old/internal/channelz
-google.golang.org/grpc-old/internal/envconfig
-google.golang.org/grpc-old/internal/grpcrand
-google.golang.org/grpc-old/internal/grpcsync
-google.golang.org/grpc-old/internal/resolver/dns
-google.golang.org/grpc-old/internal/resolver/passthrough
-google.golang.org/grpc-old/internal/syscall
-google.golang.org/grpc-old/internal/transport
-google.golang.org/grpc-old/keepalive
-google.golang.org/grpc-old/metadata
-google.golang.org/grpc-old/naming
-google.golang.org/grpc-old/peer
-google.golang.org/grpc-old/resolver
-google.golang.org/grpc-old/resolver/dns
-google.golang.org/grpc-old/resolver/passthrough
-google.golang.org/grpc-old/serviceconfig
-google.golang.org/grpc-old/stats
-google.golang.org/grpc-old/status
-google.golang.org/grpc-old/tap
-<<<<<<< HEAD
-# gopkg.in/gcfg.v1 v1.2.0 => gopkg.in/gcfg.v1 v1.2.0
-=======
+google.golang.org/grpc/attributes
+google.golang.org/grpc/backoff
+google.golang.org/grpc/balancer
+google.golang.org/grpc/balancer/base
+google.golang.org/grpc/balancer/roundrobin
+google.golang.org/grpc/binarylog/grpc_binarylog_v1
+google.golang.org/grpc/codes
+google.golang.org/grpc/connectivity
+google.golang.org/grpc/credentials
+google.golang.org/grpc/credentials/internal
+google.golang.org/grpc/encoding
+google.golang.org/grpc/encoding/proto
+google.golang.org/grpc/grpclog
+google.golang.org/grpc/internal
+google.golang.org/grpc/internal/backoff
+google.golang.org/grpc/internal/balancerload
+google.golang.org/grpc/internal/binarylog
+google.golang.org/grpc/internal/buffer
+google.golang.org/grpc/internal/channelz
+google.golang.org/grpc/internal/envconfig
+google.golang.org/grpc/internal/grpcrand
+google.golang.org/grpc/internal/grpcsync
+google.golang.org/grpc/internal/resolver/dns
+google.golang.org/grpc/internal/resolver/passthrough
+google.golang.org/grpc/internal/syscall
+google.golang.org/grpc/internal/transport
+google.golang.org/grpc/keepalive
+google.golang.org/grpc/metadata
+google.golang.org/grpc/naming
+google.golang.org/grpc/peer
+google.golang.org/grpc/resolver
+google.golang.org/grpc/resolver/dns
+google.golang.org/grpc/resolver/passthrough
+google.golang.org/grpc/serviceconfig
+google.golang.org/grpc/stats
+google.golang.org/grpc/status
+google.golang.org/grpc/tap
 # google.golang.org/protobuf v1.27.1
 ## explicit
 google.golang.org/protobuf/encoding/protojson
@@ -721,7 +712,6 @@ google.golang.org/protobuf/types/known/timestamppb
 google.golang.org/protobuf/types/known/wrapperspb
 # gopkg.in/gcfg.v1 v1.2.0
 ## explicit
->>>>>>> c147ba9a2 (Merge pull request #3 from airbnb/es--grpc-expander-plugin)
 gopkg.in/gcfg.v1
 gopkg.in/gcfg.v1/scanner
 gopkg.in/gcfg.v1/token

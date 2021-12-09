@@ -17,7 +17,7 @@ package logutil
 import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"google.golang.org/grpc-old/grpclog"
+	"google.golang.org/grpc/grpclog"
 )
 
 // NewGRPCLoggerV2 converts "*zap.Logger" to "grpclog.LoggerV2".

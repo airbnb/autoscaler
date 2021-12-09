@@ -17,7 +17,7 @@ package picker
 import (
 	"context"
 
-	"google.golang.org/grpc-old/balancer"
+	"google.golang.org/grpc/balancer"
 )
 
 // NewErr returns a picker that always returns err on "Pick".

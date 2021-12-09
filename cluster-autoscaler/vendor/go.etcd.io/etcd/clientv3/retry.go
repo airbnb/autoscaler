@@ -21,8 +21,8 @@ import (
 	pb "go.etcd.io/etcd/etcdserver/etcdserverpb"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc-old/codes"
-	"google.golang.org/grpc-old/status"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type retryPolicy uint8

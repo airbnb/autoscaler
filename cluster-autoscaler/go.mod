@@ -25,9 +25,9 @@ require (
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	google.golang.org/api v0.6.1-0.20190607001116-5213b8090861
-	google.golang.org/grpc-new v1.40.0
-	google.golang.org/protobuf-new v1.27.1
-	//github.com/golang/protobuf-new
+	google.golang.org/grpc/v2 v1.40.0
+	google.golang.org/protobuf v1.27.1
+	//github.com/golang/protobuf
 	// from master go sum: github.com/golang/protobuf v1.4.0/go.mod h1:jodUvKwWbYaEsadDk5Fwe5c77LiNKVO9IDvqG2KuDX0=
 	// google.golang.org/genproto
 	// from master go sum:
@@ -391,10 +391,9 @@ replace (
 	google.golang.org/appengine => google.golang.org/appengine v1.5.0
 	google.golang.org/genproto => google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
 
-	google.golang.org/grpc-new => google.golang.org/grpc v1.40.0
-	google.golang.org/grpc-old => google.golang.org/grpc v1.26.0
-	//google.golang.org/grpc => google.golang.org/grpc v1.26.0
-	google.golang.org/protobuf-new => google.golang.org/protobuf v1.27.1
+	google.golang.org/grpc/v2 => google.golang.org/grpc v1.40.0
+	google.golang.org/grpc => google.golang.org/grpc v1.26.0
+	google.golang.org/protobuf => google.golang.org/protobuf v1.27.1
 	gopkg.in/airbrake/gobrake.v2 => gopkg.in/airbrake/gobrake.v2 v2.0.9
 	gopkg.in/alecthomas/kingpin.v2 => gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/check.v1 => gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127

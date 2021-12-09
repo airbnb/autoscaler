@@ -21,7 +21,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	grpc "google.golang.org/grpc-new"
+	grpc "google.golang.org/grpc/v2"
 	"k8s.io/autoscaler/cluster-autoscaler/expander/grpcplugin/protos"
 )
 

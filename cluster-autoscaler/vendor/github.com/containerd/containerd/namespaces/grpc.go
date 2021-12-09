@@ -2,7 +2,7 @@ package namespaces
 
 import (
 	"golang.org/x/net/context"
-	"google.golang.org/grpc-old/metadata"
+	"google.golang.org/grpc/metadata"
 )
 
 const (

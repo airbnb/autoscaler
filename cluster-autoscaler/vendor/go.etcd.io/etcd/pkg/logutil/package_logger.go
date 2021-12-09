@@ -16,7 +16,7 @@ package logutil
 
 import (
 	"github.com/coreos/pkg/capnslog"
-	"google.golang.org/grpc-old/grpclog"
+	"google.golang.org/grpc/grpclog"
 )
 
 // assert that "packageLogger" satisfy "Logger" interface

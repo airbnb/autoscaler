@@ -6,7 +6,7 @@ package grpc_prometheus
 import (
 	"time"
 
-	"google.golang.org/grpc-old/codes"
+	"google.golang.org/grpc/codes"
 )
 
 type serverReporter struct {

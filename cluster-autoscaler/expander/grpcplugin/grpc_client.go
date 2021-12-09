@@ -21,8 +21,8 @@ import (
 	"log"
 	"time"
 
-	grpc "google.golang.org/grpc-new"
-	credentials "google.golang.org/grpc-new/credentials"
+	grpc "google.golang.org/grpc/v2"
+	credentials "google.golang.org/grpc/v2/credentials"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/autoscaler/cluster-autoscaler/expander"
 	"k8s.io/autoscaler/cluster-autoscaler/expander/grpcplugin/protos"

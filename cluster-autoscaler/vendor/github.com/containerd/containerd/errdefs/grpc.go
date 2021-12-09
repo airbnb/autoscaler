@@ -4,8 +4,8 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"google.golang.org/grpc-old/codes"
-	"google.golang.org/grpc-old/status"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // ToGRPC will attempt to map the backend containerd error into a grpc error,

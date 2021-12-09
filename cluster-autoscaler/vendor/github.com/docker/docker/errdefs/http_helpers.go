@@ -6,8 +6,8 @@ import (
 
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc-old/codes"
-	"google.golang.org/grpc-old/status"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // GetHTTPErrorStatusCode retrieves status code from error message.

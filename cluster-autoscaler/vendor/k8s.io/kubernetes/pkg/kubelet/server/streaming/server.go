@@ -26,8 +26,8 @@ import (
 	"path"
 	"time"
 
-	"google.golang.org/grpc-old/codes"
-	"google.golang.org/grpc-old/status"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	restful "github.com/emicklei/go-restful"
 

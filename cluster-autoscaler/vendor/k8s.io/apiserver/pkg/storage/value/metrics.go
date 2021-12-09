@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/grpc-old/status"
+	"google.golang.org/grpc/status"
 
 	"k8s.io/component-base/metrics"
 	"k8s.io/component-base/metrics/legacyregistry"

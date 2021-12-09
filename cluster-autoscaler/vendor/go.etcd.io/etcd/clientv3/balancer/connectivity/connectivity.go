@@ -19,7 +19,7 @@ import (
 	"sync"
 
 	"go.uber.org/zap"
-	"google.golang.org/grpc-old/connectivity"
+	"google.golang.org/grpc/connectivity"
 )
 
 // Recorder records gRPC connectivity.

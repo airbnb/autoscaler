@@ -26,9 +26,9 @@ import (
 	mvccpb "go.etcd.io/etcd/mvcc/mvccpb"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc-old/codes"
-	"google.golang.org/grpc-old/metadata"
-	"google.golang.org/grpc-old/status"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 const (
