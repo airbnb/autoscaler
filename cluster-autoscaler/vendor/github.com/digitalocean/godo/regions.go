@@ -7,7 +7,7 @@ import (
 
 // RegionsService is an interface for interfacing with the regions
 // endpoints of the DigitalOcean API
-// See: https://developers.digitalocean.com/documentation/v2#regions
+// See: https://docs.digitalocean.com/reference/api/api-reference/#tag/Regions
 type RegionsService interface {
 	List(context.Context, *ListOptions) ([]Region, *Response, error)
 }
@@ -32,6 +32,7 @@ type Region struct {
 type regionsRoot struct {
 	Regions []Region
 	Links   *Links `json:"links"`
+	Meta    *Meta  `json:"meta"`
 }
 
 func (r Region) String() string {
@@ -58,6 +59,9 @@ func (s *RegionsServiceOp) List(ctx context.Context, opt *ListOptions) ([]Region
 	}
 	if l := root.Links; l != nil {
 		resp.Links = l
+	}
+	if m := root.Meta; m != nil {
+		resp.Meta = m
 	}
 
 	return root.Regions, resp, err

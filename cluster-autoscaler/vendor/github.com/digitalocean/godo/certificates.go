@@ -9,7 +9,7 @@ import (
 const certificatesBasePath = "/v2/certificates"
 
 // CertificatesService is an interface for managing certificates with the DigitalOcean API.
-// See: https://developers.digitalocean.com/documentation/v2/#certificates
+// See: https://docs.digitalocean.com/reference/api/api-reference/#tag/Certificates
 type CertificatesService interface {
 	Get(context.Context, string) (*Certificate, *Response, error)
 	List(context.Context, *ListOptions) ([]Certificate, *Response, error)
@@ -46,6 +46,7 @@ type certificateRoot struct {
 type certificatesRoot struct {
 	Certificates []Certificate `json:"certificates"`
 	Links        *Links        `json:"links"`
+	Meta         *Meta         `json:"meta"`
 }
 
 // CertificatesServiceOp handles communication with certificates methods of the DigitalOcean API.
@@ -92,6 +93,9 @@ func (c *CertificatesServiceOp) List(ctx context.Context, opt *ListOptions) ([]C
 	}
 	if l := root.Links; l != nil {
 		resp.Links = l
+	}
+	if m := root.Meta; m != nil {
+		resp.Meta = m
 	}
 
 	return root.Certificates, resp, nil

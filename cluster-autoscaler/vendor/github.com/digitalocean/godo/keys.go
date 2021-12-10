@@ -10,7 +10,7 @@ const keysBasePath = "v2/account/keys"
 
 // KeysService is an interface for interfacing with the keys
 // endpoints of the DigitalOcean API
-// See: https://developers.digitalocean.com/documentation/v2#keys
+// See: https://docs.digitalocean.com/reference/api/api-reference/#tag/SSH-Keys
 type KeysService interface {
 	List(context.Context, *ListOptions) ([]Key, *Response, error)
 	GetByID(context.Context, int) (*Key, *Response, error)
@@ -46,6 +46,7 @@ type KeyUpdateRequest struct {
 type keysRoot struct {
 	SSHKeys []Key  `json:"ssh_keys"`
 	Links   *Links `json:"links"`
+	Meta    *Meta  `json:"meta"`
 }
 
 type keyRoot struct {
@@ -83,6 +84,9 @@ func (s *KeysServiceOp) List(ctx context.Context, opt *ListOptions) ([]Key, *Res
 	if l := root.Links; l != nil {
 		resp.Links = l
 	}
+	if m := root.Meta; m != nil {
+		resp.Meta = m
+	}
 
 	return root.SSHKeys, resp, err
 }
@@ -113,7 +117,7 @@ func (s *KeysServiceOp) GetByID(ctx context.Context, keyID int) (*Key, *Response
 	return s.get(ctx, path)
 }
 
-// GetByFingerprint gets a Key by by fingerprint
+// GetByFingerprint gets a Key by fingerprint
 func (s *KeysServiceOp) GetByFingerprint(ctx context.Context, fingerprint string) (*Key, *Response, error) {
 	if len(fingerprint) < 1 {
 		return nil, nil, NewArgError("fingerprint", "cannot not be empty")

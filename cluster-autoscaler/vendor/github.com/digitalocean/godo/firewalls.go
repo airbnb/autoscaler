@@ -10,7 +10,7 @@ import (
 const firewallsBasePath = "/v2/firewalls"
 
 // FirewallsService is an interface for managing Firewalls with the DigitalOcean API.
-// See: https://developers.digitalocean.com/documentation/v2/#firewalls
+// See: https://docs.digitalocean.com/reference/api/api-reference/#tag/Firewalls
 type FirewallsService interface {
 	Get(context.Context, string) (*Firewall, *Response, error)
 	Create(context.Context, *FirewallRequest) (*Firewall, *Response, error)
@@ -49,6 +49,7 @@ func (fw Firewall) String() string {
 	return Stringify(fw)
 }
 
+// URN returns the firewall name in a valid DO API URN form.
 func (fw Firewall) URN() string {
 	return ToURN("Firewall", fw.ID)
 }
@@ -88,6 +89,7 @@ type Sources struct {
 	Tags             []string `json:"tags,omitempty"`
 	DropletIDs       []int    `json:"droplet_ids,omitempty"`
 	LoadBalancerUIDs []string `json:"load_balancer_uids,omitempty"`
+	KubernetesIDs    []string `json:"kubernetes_ids,omitempty"`
 }
 
 // PendingChange represents a DigitalOcean Firewall status details.
@@ -103,6 +105,7 @@ type Destinations struct {
 	Tags             []string `json:"tags,omitempty"`
 	DropletIDs       []int    `json:"droplet_ids,omitempty"`
 	LoadBalancerUIDs []string `json:"load_balancer_uids,omitempty"`
+	KubernetesIDs    []string `json:"kubernetes_ids,omitempty"`
 }
 
 var _ FirewallsService = &FirewallsServiceOp{}
@@ -237,6 +240,7 @@ type firewallRoot struct {
 type firewallsRoot struct {
 	Firewalls []Firewall `json:"firewalls"`
 	Links     *Links     `json:"links"`
+	Meta      *Meta      `json:"meta"`
 }
 
 func (fw *FirewallsServiceOp) createAndDoReq(ctx context.Context, method, path string, v interface{}) (*Response, error) {
@@ -261,6 +265,9 @@ func (fw *FirewallsServiceOp) listHelper(ctx context.Context, path string) ([]Fi
 	}
 	if l := root.Links; l != nil {
 		resp.Links = l
+	}
+	if m := root.Meta; m != nil {
+		resp.Meta = m
 	}
 
 	return root.Firewalls, resp, err

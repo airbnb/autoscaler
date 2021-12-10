@@ -614,11 +614,11 @@ func (c completedConfig) New(name string, delegationTarget DelegationTarget) (*G
 			if err != nil {
 				return nil, err
 			}
-			// TODO: Once we get rid of /healthz consider changing this to post-start-hook.
-			err = s.addReadyzChecks(healthz.NewInformerSyncHealthz(c.SharedInformerFactory))
-			if err != nil {
-				return nil, err
-			}
+		}
+		// TODO: Once we get rid of /healthz consider changing this to post-start-hook.
+		err := s.addReadyzChecks(healthz.NewInformerSyncHealthz(c.SharedInformerFactory))
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -626,6 +626,7 @@ func (c completedConfig) New(name string, delegationTarget DelegationTarget) (*G
 	if s.isPostStartHookRegistered(priorityAndFairnessConfigConsumerHookName) {
 	} else if c.FlowControl != nil {
 		err := s.AddPostStartHook(priorityAndFairnessConfigConsumerHookName, func(context PostStartHookContext) error {
+			go c.FlowControl.MaintainObservations(context.StopCh)
 			go c.FlowControl.Run(context.StopCh)
 			return nil
 		})
@@ -682,7 +683,6 @@ func DefaultBuildHandlerChain(apiHandler http.Handler, c *Config) http.Handler {
 	handler = genericfilters.WithCORS(handler, c.CorsAllowedOriginList, nil, nil, nil, "true")
 	handler = genericfilters.WithTimeoutForNonLongRunningRequests(handler, c.LongRunningFunc, c.RequestTimeout)
 	handler = genericfilters.WithWaitGroup(handler, c.LongRunningFunc, c.HandlerChainWaitGroup)
-	handler = genericapifilters.WithTrace(handler, c.LongRunningFunc)
 	handler = genericapifilters.WithRequestInfo(handler, c.RequestInfoResolver)
 	if c.SecureServing != nil && !c.SecureServing.DisableHTTP2 && c.GoawayChance > 0 {
 		handler = genericfilters.WithProbabilisticGoaway(handler, c.GoawayChance)
