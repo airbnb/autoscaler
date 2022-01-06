@@ -17,6 +17,8 @@ before_script:
   - hack/install-verify-tools.sh
   - export PATH=$GOPATH/bin:$PATH
   - go version
+  - set > /tmp/envx
+  - cat /tmp/envx
 
 install: true
 
