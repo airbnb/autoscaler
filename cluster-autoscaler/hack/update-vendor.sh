@@ -3,7 +3,6 @@
 set -o errexit
 set -o pipefail
 set -o nounset
-shopt -s lastpipe
 
 if [[ $(basename $(pwd)) != "cluster-autoscaler" ]];then
   echo "The script must be run in cluster-autoscaler directory"
@@ -17,7 +16,7 @@ fi
 
 SCRIPT_NAME=$(basename "$0")
 K8S_FORK=${K8S_FORK:-"git@github.com:kubernetes/kubernetes.git"}
-K8S_REV="master"
+K8S_REV="v1.19.2"
 BATCH_MODE="false"
 TARGET_MODULE=${TARGET_MODULE:-k8s.io/autoscaler/cluster-autoscaler}
 VERIFY_COMMAND=${VERIFY_COMMAND:-"go test -mod=vendor ./..."}
@@ -108,21 +107,10 @@ set +o errexit
   cp $K8S_REPO/go.mod .
 
   # Check go version
-  REQUIRED_GO_VERSION=$(cat go.mod  |grep '^go ' |tr -s ' ' |cut -d ' '  -f 2)
-  USED_GO_VERSION=$(go version |sed 's/.*go\([0-9]\+\.[0-9]\+\).*/\1/')
-
-
-  if [[ "${REQUIRED_GO_VERSION}" != "${USED_GO_VERSION}" ]];then
-    if [[ "${OVERRIDE_GO_VERSION}" == "false" ]]; then
-      err_rerun "Invalid go version ${USED_GO_VERSION}; required go version is ${REQUIRED_GO_VERSION}."
-    else
-      echo "Overriding go version found in go.mod file. Expected go version ${REQUIRED_GO_VERSION}, using ${USED_GO_VERSION}"
-    fi
-  fi
 
   # Fix module name and staging modules links
-  sed -i "s#module k8s.io/kubernetes#module ${TARGET_MODULE}#" go.mod
-  sed -i "s#\\./staging#${K8S_REPO}/staging#" go.mod
+  sed -i"" -e "s#module k8s.io/kubernetes#module ${TARGET_MODULE}#" go.mod
+  sed -i"" -e "s#\\./staging#${K8S_REPO}/staging#" go.mod
 
   function list_dependencies() {
     local_tmp_dir=$(mktemp -d "${WORK_DIR}/list_dependencies.XXXX")
@@ -175,7 +163,7 @@ set +o errexit
 
   IMPLICIT_FOUND="false"
   set +o pipefail
-  diff -u ${WORK_DIR}/packages-before-tidy ${WORK_DIR}/packages-after-tidy | grep -v '\+\+\+ ' | grep '^\+' | cut -b 2- |while read line; do
+  diff -u ${WORK_DIR}/packages-before-tidy ${WORK_DIR}/packages-after-tidy | egrep -v '\+\+\+ ' | egrep '^\+' | cut -b 2- |while read line; do
     IMPLICIT_FOUND="true"
     echo "Implicit dependency found: ${line}"
   done
