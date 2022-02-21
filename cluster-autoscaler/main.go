@@ -154,6 +154,9 @@ var (
 	grpcExpanderCert = flag.String("grpc-expander-cert", "", "Path to cert used by gRPC server over TLS")
 	grpcExpanderURL  = flag.String("grpc-expander-url", "", "URL to reach gRPC expander server.")
 
+	grpcExpanderCert = flag.String("grpc-expander-cert", "", "Path to cert used by gRPC server over TLS")
+	grpcExpanderURL  = flag.String("grpc-expander-url", "", "URL to reach gRPC expander server.")
+
 	ignoreDaemonSetsUtilization = flag.Bool("ignore-daemonsets-utilization", false,
 		"Should CA ignore DaemonSet pods when calculating resource utilization for scaling down")
 	ignoreMirrorPodsUtilization = flag.Bool("ignore-mirror-pods-utilization", false,
