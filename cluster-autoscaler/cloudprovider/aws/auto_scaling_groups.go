@@ -447,7 +447,7 @@ func (m *asgCache) createPlaceholdersForDesiredNonStartedInstances(groups []*aut
 		for i := realInstances; i < desired; i++ {
 			id := fmt.Sprintf("%s-%s-%d", placeholderInstanceNamePrefix, *g.AutoScalingGroupName, i)
 			klog.V(4).Infof("Instance group %s has only %d instances created while requested count is %d. "+
-				"Creating placeholder instance with ID %s.", *g.AutoScalingGroupName, real, desired, id)
+				"Creating placeholder instance with ID %s.", *g.AutoScalingGroupName, realInstances, desired, id)
 			g.Instances = append(g.Instances, &autoscaling.Instance{
 				InstanceId:       &id,
 				AvailabilityZone: g.AvailabilityZones[0],
