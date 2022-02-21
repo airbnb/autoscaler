@@ -24,10 +24,12 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.6.1
-	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
-	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	github.com/stretchr/testify v1.7.0
+	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
+	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f
 	google.golang.org/api v0.20.0
+	google.golang.org/grpc v1.40.0
+	google.golang.org/protobuf v1.27.1
 	gopkg.in/gcfg.v1 v1.2.0
 	gopkg.in/yaml.v2 v2.2.8
 	k8s.io/api v0.0.0
