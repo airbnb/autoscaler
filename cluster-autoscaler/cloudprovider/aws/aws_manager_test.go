@@ -332,6 +332,7 @@ func makeTaintSet(taints []apiv1.Taint) map[apiv1.Taint]bool {
 
 func TestFetchExplicitAsgs(t *testing.T) {
 	min, max, groupname := 1, 10, "coolasg"
+	asgRef := AwsRef{Name: groupname}
 
 	a := &autoScalingMock{}
 	a.On("DescribeAutoScalingGroups", &autoscaling.DescribeAutoScalingGroupsInput{
@@ -364,6 +365,12 @@ func TestFetchExplicitAsgs(t *testing.T) {
 			}}, false)
 	}).Return(nil)
 
+	a.On("DescribeScalingActivities",
+		&autoscaling.DescribeScalingActivitiesInput{
+			AutoScalingGroupName: aws.String("coolasg"),
+		},
+	).Return(&autoscaling.DescribeScalingActivitiesOutput{}, nil)
+
 	do := cloudprovider.NodeGroupDiscoveryOptions{
 		// Register the same node group twice with different max nodes.
 		// The intention is to test that the asgs.Register method will update
@@ -382,7 +389,7 @@ func TestFetchExplicitAsgs(t *testing.T) {
 
 	asgs := m.asgCache.Get()
 	assert.Equal(t, 1, len(asgs))
-	validateAsg(t, asgs[0], groupname, min, max)
+	validateAsg(t, asgs[asgRef], groupname, min, max)
 }
 
 func TestGetASGTemplate(t *testing.T) {
@@ -478,6 +485,7 @@ func TestGetASGTemplate(t *testing.T) {
 func TestFetchAutoAsgs(t *testing.T) {
 	min, max := 1, 10
 	groupname, tags := "coolasg", []string{"tag", "anothertag"}
+	asgRef := AwsRef{Name: groupname}
 
 	a := &autoScalingMock{}
 	// Lookup groups associated with tags
@@ -521,6 +529,12 @@ func TestFetchAutoAsgs(t *testing.T) {
 			}}}, false)
 	}).Return(nil).Twice()
 
+	a.On("DescribeScalingActivities",
+		&autoscaling.DescribeScalingActivitiesInput{
+			AutoScalingGroupName: aws.String("coolasg"),
+		},
+	).Return(&autoscaling.DescribeScalingActivitiesOutput{}, nil)
+
 	do := cloudprovider.NodeGroupDiscoveryOptions{
 		NodeGroupAutoDiscoverySpecs: []string{fmt.Sprintf("asg:tag=%s", strings.Join(tags, ","))},
 	}
@@ -535,7 +549,7 @@ func TestFetchAutoAsgs(t *testing.T) {
 
 	asgs := m.asgCache.Get()
 	assert.Equal(t, 1, len(asgs))
-	validateAsg(t, asgs[0], groupname, min, max)
+	validateAsg(t, asgs[asgRef], groupname, min, max)
 
 	// Simulate the previously discovered ASG disappearing
 	a.On("DescribeTagsPages", mock.MatchedBy(tagsMatcher(expectedTagsInput)),
