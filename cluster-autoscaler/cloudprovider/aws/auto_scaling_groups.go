@@ -67,7 +67,7 @@ type asg struct {
 	minSize        int
 	maxSize        int
 	curSize        int
-	lastUpdateTime *time.Time
+	lastUpdateTime time.Time
 
 	AvailabilityZones       []string
 	LaunchConfigurationName string
@@ -254,7 +254,7 @@ func (m *asgCache) setAsgSizeNoLock(asg *asg, size int) error {
 	}
 
 	// Proactively set the ASG size so autoscaler makes better decisions
-	asg.lastUpdateTime = &start
+	asg.lastUpdateTime = start
 	asg.curSize = size
 
 	return nil
@@ -479,7 +479,6 @@ func (m *asgCache) createPlaceholdersForDesiredNonStartedInstances(groups []*aut
 func (m *asgCache) isNodeGroupAvailable(group *autoscaling.Group) (bool, error) {
 	input := &autoscaling.DescribeScalingActivitiesInput{
 		AutoScalingGroupName: group.AutoScalingGroupName,
-		MaxRecords:           aws.Int64(1), // We only care about the most recent event
 	}
 
 	start := time.Now()
@@ -489,12 +488,14 @@ func (m *asgCache) isNodeGroupAvailable(group *autoscaling.Group) (bool, error) 
 		return true, err // If we can't describe the scaling activities we assume the node group is available
 	}
 
-	if len(response.Activities) > 0 {
-		activity := response.Activities[0]
+	for _, activity := range response.Activities {
 		asgRef := AwsRef{Name: *group.AutoScalingGroupName}
 		if a, ok := m.registeredAsgs[asgRef]; ok {
 			lut := a.lastUpdateTime
-			if lut != nil && activity.StartTime.After(*lut) && *activity.StatusCode == "Failed" {
+			if activity.StartTime.Before(lut) {
+				break
+			} else if *activity.StatusCode == "Failed" {
+				klog.Warningf("ASG %s scaling failed with %s", asgRef.Name, *activity)
 				return false, nil
 			}
 		} else {
