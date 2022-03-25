@@ -249,7 +249,14 @@ github.com/gogo/protobuf/types
 github.com/golang/groupcache/lru
 # github.com/golang/mock v1.3.1 => github.com/golang/mock v1.3.1
 github.com/golang/mock/gomock
+<<<<<<< HEAD
 # github.com/golang/protobuf v1.4.2 => github.com/golang/protobuf v1.4.2
+=======
+github.com/golang/mock/mockgen/model
+# github.com/golang/protobuf v1.5.2
+github.com/golang/protobuf/descriptor
+github.com/golang/protobuf/jsonpb
+>>>>>>> 0123869b7 (Merge pull request #4452 from airbnb/es--grpc-expander-plugin)
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/protoc-gen-go/descriptor
 github.com/golang/protobuf/ptypes
@@ -663,7 +670,13 @@ google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
 # google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 => google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
 google.golang.org/genproto/googleapis/rpc/status
+<<<<<<< HEAD
 # google.golang.org/grpc v1.27.0 => google.golang.org/grpc v1.27.0
+=======
+google.golang.org/genproto/protobuf/field_mask
+# google.golang.org/grpc v1.40.0
+## explicit
+>>>>>>> 0123869b7 (Merge pull request #4452 from airbnb/es--grpc-expander-plugin)
 google.golang.org/grpc
 google.golang.org/grpc/attributes
 google.golang.org/grpc/backoff
@@ -702,7 +715,9 @@ google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
-# google.golang.org/protobuf v1.24.0 => google.golang.org/protobuf v1.24.0
+# google.golang.org/protobuf v1.27.1
+## explicit
+google.golang.org/protobuf/encoding/protojson
 google.golang.org/protobuf/encoding/prototext
 google.golang.org/protobuf/encoding/protowire
 google.golang.org/protobuf/internal/descfmt

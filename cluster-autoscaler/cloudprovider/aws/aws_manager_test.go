@@ -259,9 +259,10 @@ func makeTaintSet(taints []apiv1.Taint) map[apiv1.Taint]bool {
 
 func TestFetchExplicitAsgs(t *testing.T) {
 	min, max, groupname := 1, 10, "coolasg"
+	asgRef := AwsRef{Name: groupname}
 
-	s := &AutoScalingMock{}
-	s.On("DescribeAutoScalingGroups", &autoscaling.DescribeAutoScalingGroupsInput{
+	a := &autoScalingMock{}
+	a.On("DescribeAutoScalingGroups", &autoscaling.DescribeAutoScalingGroupsInput{
 		AutoScalingGroupNames: []*string{aws.String(groupname)},
 		MaxRecords:            aws.Int64(1),
 	}).Return(&autoscaling.DescribeAutoScalingGroupsOutput{
@@ -270,7 +271,7 @@ func TestFetchExplicitAsgs(t *testing.T) {
 		},
 	})
 
-	s.On("DescribeAutoScalingGroupsPages",
+	a.On("DescribeAutoScalingGroupsPages",
 		&autoscaling.DescribeAutoScalingGroupsInput{
 			AutoScalingGroupNames: aws.StringSlice([]string{groupname}),
 			MaxRecords:            aws.Int64(maxRecordsReturnedByAPI),
@@ -291,6 +292,12 @@ func TestFetchExplicitAsgs(t *testing.T) {
 			}}, false)
 	}).Return(nil)
 
+	a.On("DescribeScalingActivities",
+		&autoscaling.DescribeScalingActivitiesInput{
+			AutoScalingGroupName: aws.String("coolasg"),
+		},
+	).Return(&autoscaling.DescribeScalingActivitiesOutput{}, nil)
+
 	do := cloudprovider.NodeGroupDiscoveryOptions{
 		// Register the same node group twice with different max nodes.
 		// The intention is to test that the asgs.Register method will update
@@ -304,118 +311,25 @@ func TestFetchExplicitAsgs(t *testing.T) {
 	defer resetAWSRegion(os.LookupEnv("AWS_REGION"))
 	os.Setenv("AWS_REGION", "fanghorn")
 	instanceTypes, _ := GetStaticEC2InstanceTypes()
-	m, err := createAWSManagerInternal(nil, do, &autoScalingWrapper{s, newLaunchConfigurationInstanceTypeCache()}, nil, instanceTypes)
+	m, err := createAWSManagerInternal(nil, do, &awsWrapper{a, nil}, instanceTypes)
 	assert.NoError(t, err)
 
 	asgs := m.asgCache.Get()
 	assert.Equal(t, 1, len(asgs))
-	validateAsg(t, asgs[0], groupname, min, max)
-}
-
-func TestBuildInstanceType(t *testing.T) {
-	ltName, ltVersion, instanceType := "launcher", "1", "t2.large"
-
-	s := &EC2Mock{}
-	s.On("DescribeLaunchTemplateVersions", &ec2.DescribeLaunchTemplateVersionsInput{
-		LaunchTemplateName: aws.String(ltName),
-		Versions:           []*string{aws.String(ltVersion)},
-	}).Return(&ec2.DescribeLaunchTemplateVersionsOutput{
-		LaunchTemplateVersions: []*ec2.LaunchTemplateVersion{
-			{
-				LaunchTemplateData: &ec2.ResponseLaunchTemplateData{
-					InstanceType: aws.String(instanceType),
-				},
-			},
-		},
-	})
-
-	// #1449 Without AWS_REGION getRegion() lookup runs till timeout during tests.
-	defer resetAWSRegion(os.LookupEnv("AWS_REGION"))
-	os.Setenv("AWS_REGION", "fanghorn")
-	instanceTypes, _ := GetStaticEC2InstanceTypes()
-	m, err := createAWSManagerInternal(nil, cloudprovider.NodeGroupDiscoveryOptions{}, nil, &ec2Wrapper{s}, instanceTypes)
-	assert.NoError(t, err)
-
-	asg := asg{
-		LaunchTemplate: &launchTemplate{name: ltName, version: ltVersion},
-	}
-
-	builtInstanceType, err := m.buildInstanceType(&asg)
-
-	assert.NoError(t, err)
-	assert.Equal(t, instanceType, builtInstanceType)
-}
-
-func TestBuildInstanceTypeMixedInstancePolicyOverride(t *testing.T) {
-	ltName, ltVersion, instanceType := "launcher", "1", "t2.large"
-	instanceTypeOverrides := []string{}
-
-	s := &EC2Mock{}
-	s.On("DescribeLaunchTemplateVersions", &ec2.DescribeLaunchTemplateVersionsInput{
-		LaunchTemplateName: aws.String(ltName),
-		Versions:           []*string{aws.String(ltVersion)},
-	}).Return(&ec2.DescribeLaunchTemplateVersionsOutput{
-		LaunchTemplateVersions: []*ec2.LaunchTemplateVersion{
-			{
-				LaunchTemplateData: &ec2.ResponseLaunchTemplateData{
-					InstanceType: aws.String(instanceType),
-				},
-			},
-		},
-	})
-
-	defer resetAWSRegion(os.LookupEnv("AWS_REGION"))
-	os.Setenv("AWS_REGION", "fanghorn")
-	instanceTypes, _ := GetStaticEC2InstanceTypes()
-	m, err := createAWSManagerInternal(nil, cloudprovider.NodeGroupDiscoveryOptions{}, nil, &ec2Wrapper{s}, instanceTypes)
-	assert.NoError(t, err)
-
-	lt := &launchTemplate{name: ltName, version: ltVersion}
-	asg := asg{
-		MixedInstancesPolicy: &mixedInstancesPolicy{
-			launchTemplate:         lt,
-			instanceTypesOverrides: instanceTypeOverrides,
-		},
-	}
-
-	builtInstanceType, err := m.buildInstanceType(&asg)
-
-	assert.NoError(t, err)
-	assert.Equal(t, instanceType, builtInstanceType)
-}
-
-func TestBuildInstanceTypeMixedInstancePolicyNoOverride(t *testing.T) {
-	ltName, ltVersion := "launcher", "1"
-	instanceTypeOverrides := []string{"m4.xlarge", "m5.xlarge"}
-
-	defer resetAWSRegion(os.LookupEnv("AWS_REGION"))
-	os.Setenv("AWS_REGION", "fanghorn")
-	instanceTypes, _ := GetStaticEC2InstanceTypes()
-	m, err := createAWSManagerInternal(nil, cloudprovider.NodeGroupDiscoveryOptions{}, nil, &ec2Wrapper{}, instanceTypes)
-	assert.NoError(t, err)
-
-	lt := &launchTemplate{name: ltName, version: ltVersion}
-	asg := asg{
-		MixedInstancesPolicy: &mixedInstancesPolicy{
-			launchTemplate:         lt,
-			instanceTypesOverrides: instanceTypeOverrides,
-		},
-	}
-
-	builtInstanceType, err := m.buildInstanceType(&asg)
-
-	assert.NoError(t, err)
-	assert.Equal(t, instanceTypeOverrides[0], builtInstanceType)
+	validateAsg(t, asgs[asgRef], groupname, min, max)
 }
 
 func TestGetASGTemplate(t *testing.T) {
 	const (
+		asgName           = "sample"
 		knownInstanceType = "t3.micro"
 		region            = "us-east-1"
 		az                = region + "a"
 		ltName            = "launcher"
 		ltVersion         = "1"
 	)
+
+	asgRef := AwsRef{Name: asgName}
 
 	tags := []*autoscaling.TagDescription{
 		{
@@ -442,8 +356,8 @@ func TestGetASGTemplate(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			s := &EC2Mock{}
-			s.On("DescribeLaunchTemplateVersions", &ec2.DescribeLaunchTemplateVersionsInput{
+			e := &ec2Mock{}
+			e.On("DescribeLaunchTemplateVersions", &ec2.DescribeLaunchTemplateVersionsInput{
 				LaunchTemplateName: aws.String(ltName),
 				Versions:           []*string{aws.String(ltVersion)},
 			}).Return(&ec2.DescribeLaunchTemplateVersionsOutput{
@@ -460,11 +374,18 @@ func TestGetASGTemplate(t *testing.T) {
 			defer resetAWSRegion(os.LookupEnv("AWS_REGION"))
 			os.Setenv("AWS_REGION", "fanghorn")
 			instanceTypes, _ := GetStaticEC2InstanceTypes()
-			m, err := createAWSManagerInternal(nil, cloudprovider.NodeGroupDiscoveryOptions{}, nil, &ec2Wrapper{s}, instanceTypes)
+			do := cloudprovider.NodeGroupDiscoveryOptions{}
+
+			m, err := createAWSManagerInternal(nil, do, &awsWrapper{nil, e}, instanceTypes)
+			origGetInstanceTypeFunc := getInstanceTypeForAsg
+			defer func() { getInstanceTypeForAsg = origGetInstanceTypeFunc }()
+			getInstanceTypeForAsg = func(m *asgCache, asg *asg) (string, error) {
+				return test.instanceType, nil
+			}
 			assert.NoError(t, err)
 
 			asg := &asg{
-				AwsRef:            AwsRef{Name: "sample"},
+				AwsRef:            asgRef,
 				AvailabilityZones: test.availabilityZones,
 				LaunchTemplate: &launchTemplate{
 					name:    ltName,
@@ -491,8 +412,9 @@ func TestGetASGTemplate(t *testing.T) {
 func TestFetchAutoAsgs(t *testing.T) {
 	min, max := 1, 10
 	groupname, tags := "coolasg", []string{"tag", "anothertag"}
+	asgRef := AwsRef{Name: groupname}
 
-	s := &AutoScalingMock{}
+	a := &autoScalingMock{}
 	// Lookup groups associated with tags
 	expectedTagsInput := &autoscaling.DescribeTagsInput{
 		Filters: []*autoscaling.Filter{
@@ -502,7 +424,7 @@ func TestFetchAutoAsgs(t *testing.T) {
 		MaxRecords: aws.Int64(maxRecordsReturnedByAPI),
 	}
 	// Use MatchedBy pattern to avoid list order issue https://github.com/kubernetes/autoscaler/issues/1346
-	s.On("DescribeTagsPages", mock.MatchedBy(tagsMatcher(expectedTagsInput)),
+	a.On("DescribeTagsPages", mock.MatchedBy(tagsMatcher(expectedTagsInput)),
 		mock.AnythingOfType("func(*autoscaling.DescribeTagsOutput, bool) bool"),
 	).Run(func(args mock.Arguments) {
 		fn := args.Get(1).(func(*autoscaling.DescribeTagsOutput, bool) bool)
@@ -515,7 +437,7 @@ func TestFetchAutoAsgs(t *testing.T) {
 
 	// Describe the group to register it, then again to generate the instance
 	// cache.
-	s.On("DescribeAutoScalingGroupsPages",
+	a.On("DescribeAutoScalingGroupsPages",
 		&autoscaling.DescribeAutoScalingGroupsInput{
 			AutoScalingGroupNames: aws.StringSlice([]string{groupname}),
 			MaxRecords:            aws.Int64(maxRecordsReturnedByAPI),
@@ -534,6 +456,12 @@ func TestFetchAutoAsgs(t *testing.T) {
 			}}}, false)
 	}).Return(nil).Twice()
 
+	a.On("DescribeScalingActivities",
+		&autoscaling.DescribeScalingActivitiesInput{
+			AutoScalingGroupName: aws.String("coolasg"),
+		},
+	).Return(&autoscaling.DescribeScalingActivitiesOutput{}, nil)
+
 	do := cloudprovider.NodeGroupDiscoveryOptions{
 		NodeGroupAutoDiscoverySpecs: []string{fmt.Sprintf("asg:tag=%s", strings.Join(tags, ","))},
 	}
@@ -543,15 +471,15 @@ func TestFetchAutoAsgs(t *testing.T) {
 	os.Setenv("AWS_REGION", "fanghorn")
 	// fetchAutoASGs is called at manager creation time, via forceRefresh
 	instanceTypes, _ := GetStaticEC2InstanceTypes()
-	m, err := createAWSManagerInternal(nil, do, &autoScalingWrapper{s, newLaunchConfigurationInstanceTypeCache()}, nil, instanceTypes)
+	m, err := createAWSManagerInternal(nil, do, &awsWrapper{a, nil}, instanceTypes)
 	assert.NoError(t, err)
 
 	asgs := m.asgCache.Get()
 	assert.Equal(t, 1, len(asgs))
-	validateAsg(t, asgs[0], groupname, min, max)
+	validateAsg(t, asgs[asgRef], groupname, min, max)
 
 	// Simulate the previously discovered ASG disappearing
-	s.On("DescribeTagsPages", mock.MatchedBy(tagsMatcher(expectedTagsInput)),
+	a.On("DescribeTagsPages", mock.MatchedBy(tagsMatcher(expectedTagsInput)),
 		mock.AnythingOfType("func(*autoscaling.DescribeTagsOutput, bool) bool"),
 	).Run(func(args mock.Arguments) {
 		fn := args.Get(1).(func(*autoscaling.DescribeTagsOutput, bool) bool)
