@@ -60,6 +60,8 @@ const (
 	OVHcloudProviderName = "ovhcloud"
 	// LinodeProviderName gets the provider name of linode
 	LinodeProviderName = "linode"
+	// ExternalGrpcProviderName gets the provider name of the external grpc provider
+	ExternalGrpcProviderName = "externalgrpc"
 )
 
 // CloudProvider contains configuration info and functions for interacting with
