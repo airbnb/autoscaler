@@ -184,7 +184,19 @@ var (
 	daemonSetEvictionForOccupiedNodes  = flag.Bool("daemonset-eviction-for-occupied-nodes", true, "DaemonSet pods will be gracefully terminated from non-empty nodes")
 	userAgent                          = flag.String("user-agent", "cluster-autoscaler", "User agent used for HTTP calls.")
 
-	emitPerNodeGroupMetrics = flag.Bool("emit-per-nodegroup-metrics", false, "If true, emit per node group metrics.")
+	emitPerNodeGroupMetrics         = flag.Bool("emit-per-nodegroup-metrics", false, "If true, emit per node group metrics.")
+	initialNodeGroupBackoffDuration = flag.Duration("initial-node-group-backoff-duration", 5*time.Minute,
+		"initialNodeGroupBackoffDuration is the duration of first backoff after a new node failed to start.")
+	maxNodeGroupBackoffDuration = flag.Duration("max-node-group-backoff-duration", 30*time.Minute,
+		"maxNodeGroupBackoffDuration is the maximum backoff duration for a NodeGroup after new nodes failed to start.")
+	nodeGroupBackoffResetTimeout = flag.Duration("node-group-backoff-reset-timeout", 3*time.Hour,
+		"nodeGroupBackoffResetTimeout is the time after last failed scale-up when the backoff duration is reset.")
+	maxScaleDownParallelismFlag        = flag.Int("max-scale-down-parallelism", 10, "Maximum number of nodes (both empty and needing drain) that can be deleted in parallel.")
+	maxDrainParallelismFlag            = flag.Int("max-drain-parallelism", 1, "Maximum number of nodes needing drain, that can be drained and deleted in parallel.")
+	gceExpanderEphemeralStorageSupport = flag.Bool("gce-expander-ephemeral-storage-support", false, "Whether scale-up takes ephemeral storage resources into account for GCE cloud provider")
+	recordDuplicatedEvents             = flag.Bool("record-duplicated-events", false, "enable duplication of similar events within a 5 minute window.")
+	maxNodesPerScaleUp                 = flag.Int("max-nodes-per-scaleup", 1000, "Max nodes added in a single scale-up. This is intended strictly for optimizing CA algorithm latency and not a tool to rate-limit scale-up throughput.")
+	maxNodeGroupBinpackingDuration     = flag.Duration("max-nodegroup-binpacking-duration", 10*time.Second, "Maximum time that will be spent in binpacking simulation for each NodeGroup.")
 )
 
 func createAutoscalingOptions() config.AutoscalingOptions {
@@ -264,6 +276,15 @@ func createAutoscalingOptions() config.AutoscalingOptions {
 		DaemonSetEvictionForEmptyNodes:     *daemonSetEvictionForEmptyNodes,
 		DaemonSetEvictionForOccupiedNodes:  *daemonSetEvictionForOccupiedNodes,
 		UserAgent:                          *userAgent,
+		InitialNodeGroupBackoffDuration:    *initialNodeGroupBackoffDuration,
+		MaxNodeGroupBackoffDuration:        *maxNodeGroupBackoffDuration,
+		NodeGroupBackoffResetTimeout:       *nodeGroupBackoffResetTimeout,
+		MaxScaleDownParallelism:            *maxScaleDownParallelismFlag,
+		MaxDrainParallelism:                *maxDrainParallelismFlag,
+		GceExpanderEphemeralStorageSupport: *gceExpanderEphemeralStorageSupport,
+		RecordDuplicatedEvents:             *recordDuplicatedEvents,
+		MaxNodesPerScaleUp:                 *maxNodesPerScaleUp,
+		MaxNodeGroupBinpackingDuration:     *maxNodeGroupBinpackingDuration,
 	}
 }
 
