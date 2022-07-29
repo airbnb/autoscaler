@@ -150,8 +150,10 @@ var (
 	estimatorFlag = flag.String("estimator", estimator.BinpackingEstimatorName,
 		"Type of resource estimator to be used in scale up. Available values: ["+strings.Join(estimator.AvailableEstimators, ",")+"]")
 
-	expanderFlag = flag.String("expander", expander.RandomExpanderName,
-		"Type of node group expander to be used in scale up. Available values: ["+strings.Join(expander.AvailableExpanders, ",")+"]")
+	expanderFlag = flag.String("expander", "", "Type of node group expander to be used in scale up. Available values: ["+strings.Join(expander.AvailableExpanders, ",")+"]. Specifying multiple values separated by commas will call the expanders in succession until there is only one option remaining. Ties still existing after this process are broken randomly.")
+
+	grpcExpanderCert = flag.String("grpc-expander-cert", "", "Path to cert used by gRPC server over TLS")
+	grpcExpanderURL  = flag.String("grpc-expander-url", "", "URL to reach gRPC expander server.")
 
 	ignoreDaemonSetsUtilization = flag.Bool("ignore-daemonsets-utilization", false,
 		"Should CA ignore DaemonSet pods when calculating resource utilization for scaling down")
@@ -203,7 +205,9 @@ func createAutoscalingOptions() config.AutoscalingOptions {
 		OkTotalUnreadyCount:                *okTotalUnreadyCount,
 		ScaleUpFromZero:                    *scaleUpFromZero,
 		EstimatorName:                      *estimatorFlag,
-		ExpanderName:                       *expanderFlag,
+		ExpanderNames:                      *expanderFlag,
+		GRPCExpanderCert:                   *grpcExpanderCert,
+		GRPCExpanderURL:                    *grpcExpanderURL,
 		IgnoreDaemonSetsUtilization:        *ignoreDaemonSetsUtilization,
 		IgnoreMirrorPodsUtilization:        *ignoreMirrorPodsUtilization,
 		MaxBulkSoftTaintCount:              *maxBulkSoftTaintCount,

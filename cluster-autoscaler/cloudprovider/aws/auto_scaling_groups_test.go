@@ -17,12 +17,13 @@ limitations under the License.
 package aws
 
 import (
+	"errors"
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/assert"
-
-	sdkaws "github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBuildAsg(t *testing.T) {
@@ -50,63 +51,118 @@ func validateAsg(t *testing.T, asg *asg, name string, minSize int, maxSize int) 
 	assert.Equal(t, maxSize, asg.maxSize)
 }
 
-func TestBuildLaunchTemplateFromSpec(t *testing.T) {
-	assert := assert.New(t)
+func TestCreatePlaceholders(t *testing.T) {
+	registeredAsgName := aws.String("test-asg")
+	registeredAsgRef := AwsRef{Name: *registeredAsgName}
 
-	units := []struct {
-		name string
-		in   *autoscaling.LaunchTemplateSpecification
-		exp  *launchTemplate
+	cases := []struct {
+		name                string
+		desiredCapacity     *int64
+		activities          []*autoscaling.Activity
+		groupLastUpdateTime time.Time
+		describeErr         error
+		asgToCheck          *string
 	}{
 		{
-			name: "non-default, specified version",
-			in: &autoscaling.LaunchTemplateSpecification{
-				LaunchTemplateName: sdkaws.String("foo"),
-				Version:            sdkaws.String("1"),
-			},
-			exp: &launchTemplate{
-				name:    "foo",
-				version: "1",
-			},
+			name:            "add placeholders successful",
+			desiredCapacity: aws.Int64(10),
 		},
 		{
-			name: "non-default, specified $Latest",
-			in: &autoscaling.LaunchTemplateSpecification{
-				LaunchTemplateName: sdkaws.String("foo"),
-				Version:            sdkaws.String("$Latest"),
-			},
-			exp: &launchTemplate{
-				name:    "foo",
-				version: "$Latest",
-			},
+			name:            "no placeholders needed",
+			desiredCapacity: aws.Int64(0),
 		},
 		{
-			name: "specified $Default",
-			in: &autoscaling.LaunchTemplateSpecification{
-				LaunchTemplateName: sdkaws.String("foo"),
-				Version:            sdkaws.String("$Default"),
-			},
-			exp: &launchTemplate{
-				name:    "foo",
-				version: "$Default",
-			},
+			name:            "DescribeScalingActivities failed",
+			desiredCapacity: aws.Int64(1),
+			describeErr:     errors.New("timeout"),
 		},
 		{
-			name: "no version specified",
-			in: &autoscaling.LaunchTemplateSpecification{
-				LaunchTemplateName: sdkaws.String("foo"),
-				Version:            nil,
+			name:            "early abort if AWS scaling up fails",
+			desiredCapacity: aws.Int64(1),
+			activities: []*autoscaling.Activity{
+				{
+					StatusCode: aws.String("Failed"),
+					StartTime:  aws.Time(time.Unix(10, 0)),
+				},
 			},
-			exp: &launchTemplate{
-				name:    "foo",
-				version: "$Default",
+			groupLastUpdateTime: time.Unix(9, 0),
+		},
+		{
+			name:            "AWS scaling failed event before CA scale_up",
+			desiredCapacity: aws.Int64(1),
+			activities: []*autoscaling.Activity{
+				{
+					StatusCode: aws.String("Failed"),
+					StartTime:  aws.Time(time.Unix(9, 0)),
+				},
 			},
+			groupLastUpdateTime: time.Unix(10, 0),
+		},
+		{
+			name:            "asg not registered",
+			desiredCapacity: aws.Int64(10),
+			activities: []*autoscaling.Activity{
+				{
+					StatusCode: aws.String("Failed"),
+					StartTime:  aws.Time(time.Unix(10, 0)),
+				},
+			},
+			groupLastUpdateTime: time.Unix(9, 0),
+			asgToCheck:          aws.String("unregisteredAsgName"),
 		},
 	}
 
-	cache := &asgCache{}
-	for _, unit := range units {
-		got := cache.buildLaunchTemplateFromSpec(unit.in)
-		assert.Equal(unit.exp, got)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			shouldCallDescribeScalingActivities := true
+			if *tc.desiredCapacity == int64(0) {
+				shouldCallDescribeScalingActivities = false
+			}
+
+			asgName := registeredAsgName
+			if tc.asgToCheck != nil {
+				asgName = tc.asgToCheck
+			}
+
+			a := &autoScalingMock{}
+			if shouldCallDescribeScalingActivities {
+				a.On("DescribeScalingActivities", &autoscaling.DescribeScalingActivitiesInput{
+					AutoScalingGroupName: asgName,
+				}).Return(
+					&autoscaling.DescribeScalingActivitiesOutput{Activities: tc.activities},
+					tc.describeErr,
+				).Once()
+			}
+
+			asgCache := &asgCache{
+				awsService: &awsWrapper{
+					autoScalingI: a,
+					ec2I:         nil,
+				},
+				registeredAsgs: map[AwsRef]*asg{
+					registeredAsgRef: {
+						AwsRef:         registeredAsgRef,
+						lastUpdateTime: tc.groupLastUpdateTime,
+					},
+				},
+			}
+
+			groups := []*autoscaling.Group{
+				{
+					AutoScalingGroupName: asgName,
+					AvailabilityZones:    []*string{aws.String("westeros-1a")},
+					DesiredCapacity:      tc.desiredCapacity,
+					Instances:            []*autoscaling.Instance{},
+				},
+			}
+			asgCache.createPlaceholdersForDesiredNonStartedInstances(groups)
+			assert.Equal(t, int64(len(groups[0].Instances)), *tc.desiredCapacity)
+			if tc.activities != nil && *tc.activities[0].StatusCode == "Failed" && tc.activities[0].StartTime.After(tc.groupLastUpdateTime) && asgName == registeredAsgName {
+				assert.Equal(t, *groups[0].Instances[0].HealthStatus, placeholderUnfulfillableStatus)
+			} else if len(groups[0].Instances) > 0 {
+				assert.Equal(t, *groups[0].Instances[0].HealthStatus, "")
+			}
+			a.AssertExpectations(t)
+		})
 	}
 }
