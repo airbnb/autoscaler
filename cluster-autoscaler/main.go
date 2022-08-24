@@ -178,6 +178,8 @@ var (
 	enableProfiling                    = flag.Bool("profiling", false, "Is debug/pprof endpoint enabled")
 	clusterAPICloudConfigAuthoritative = flag.Bool("clusterapi-cloud-config-authoritative", false, "Treat the cloud-config flag authoritatively (do not fallback to using kubeconfig flag). ClusterAPI only")
 	cordonNodeBeforeTerminate          = flag.Bool("cordon-node-before-terminating", false, "Should CA cordon nodes before terminating during downscale process")
+	maxNodesPerScaleUp                 = flag.Int("max-nodes-per-scaleup", 1000, "Max nodes added in a single scale-up. This is intended strictly for optimizing CA algorithm latency and not a tool to rate-limit scale-up throughput.")
+	maxNodeGroupBinpackingDuration     = flag.Duration("max-nodegroup-binpacking-duration", 10*time.Second, "Maximum time that will be spent in binpacking simulation for each NodeGroup.")
 )
 
 func createAutoscalingOptions() config.AutoscalingOptions {
@@ -250,6 +252,8 @@ func createAutoscalingOptions() config.AutoscalingOptions {
 		AWSUseStaticInstanceList:           *awsUseStaticInstanceList,
 		ClusterAPICloudConfigAuthoritative: *clusterAPICloudConfigAuthoritative,
 		CordonNodeBeforeTerminate:          *cordonNodeBeforeTerminate,
+		MaxNodesPerScaleUp:                 *maxNodesPerScaleUp,
+		MaxNodeGroupBinpackingDuration:     *maxNodeGroupBinpackingDuration,
 	}
 }
 
