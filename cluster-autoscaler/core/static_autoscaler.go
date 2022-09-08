@@ -337,7 +337,15 @@ func (a *StaticAutoscaler) RunOnce(currentTime time.Time) errors.AutoscalerError
 		return nil
 	}
 
-	a.deleteCreatedNodesWithErrors()
+	danglingNodes, err := a.deleteCreatedNodesWithErrors()
+	if err != nil {
+		klog.Warningf("Failed to remove nodes that were created with errors, skipping iteration: %v", err)
+		return nil
+	}
+	if danglingNodes {
+		klog.V(0).Infof("Some nodes that failed to create were removed, skipping iteration")
+		return nil
+	}
 
 	// Check if there has been a constant difference between the number of nodes in k8s and
 	// the number of nodes on the cloud provider side.
@@ -624,7 +632,7 @@ func removeOldUnregisteredNodes(unregisteredNodes []clusterstate.UnregisteredNod
 	return removedAny, nil
 }
 
-func (a *StaticAutoscaler) deleteCreatedNodesWithErrors() {
+func (a *StaticAutoscaler) deleteCreatedNodesWithErrors() (bool, error) {
 	// We always schedule deleting of incoming errornous nodes
 	// TODO[lukaszos] Consider adding logic to not retry delete every loop iteration
 	nodes := a.clusterStateRegistry.GetCreatedNodesWithErrors()
@@ -642,8 +650,13 @@ func (a *StaticAutoscaler) deleteCreatedNodesWithErrors() {
 			klog.Warningf("Cannot determine nodeGroup for node %v; %v", id, err)
 			continue
 		}
+		if nodeGroup == nil || reflect.ValueOf(nodeGroup).IsNil() {
+			return false, fmt.Errorf("node %s has no known nodegroup", node.GetName())
+		}
 		nodesToBeDeletedByNodeGroupId[nodeGroup.Id()] = append(nodesToBeDeletedByNodeGroupId[nodeGroup.Id()], node)
 	}
+
+	deletedAny := false
 
 	for nodeGroupId, nodesToBeDeleted := range nodesToBeDeletedByNodeGroupId {
 		var err error
@@ -660,8 +673,11 @@ func (a *StaticAutoscaler) deleteCreatedNodesWithErrors() {
 			klog.Warningf("Error while trying to delete nodes from %v: %v", nodeGroupId, err)
 		}
 
+		deletedAny = deletedAny || err == nil
 		a.clusterStateRegistry.InvalidateNodeInstancesCacheEntry(nodeGroup)
 	}
+
+	return deletedAny, nil
 }
 
 func (a *StaticAutoscaler) nodeGroupsById() map[string]cloudprovider.NodeGroup {
