@@ -656,6 +656,8 @@ func (a *StaticAutoscaler) deleteCreatedNodesWithErrors() (bool, error) {
 		nodesToBeDeletedByNodeGroupId[nodeGroup.Id()] = append(nodesToBeDeletedByNodeGroupId[nodeGroup.Id()], node)
 	}
 
+	deletedAny := false
+
 	for nodeGroupId, nodesToBeDeleted := range nodesToBeDeletedByNodeGroupId {
 		var err error
 		klog.V(1).Infof("Deleting %v from %v node group because of create errors", len(nodesToBeDeleted), nodeGroupId)
