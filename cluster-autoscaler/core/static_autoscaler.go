@@ -673,6 +673,7 @@ func (a *StaticAutoscaler) deleteCreatedNodesWithErrors() (bool, error) {
 			klog.Warningf("Error while trying to delete nodes from %v: %v", nodeGroupId, err)
 		}
 
+		deletedAny = deletedAny || err == nil
 		a.clusterStateRegistry.InvalidateNodeInstancesCacheEntry(nodeGroup)
 	}
 
