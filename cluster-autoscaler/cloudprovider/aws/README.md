@@ -48,6 +48,42 @@ by specifying Auto Scaling Group ARNs in the `Resource` list of the policy. More
 information can be found
 [here](https://docs.aws.amazon.com/autoscaling/latest/userguide/control-access-using-iam.html#policy-auto-scaling-resources).
 
+*NOTE:* The below policies/arguments to the Cluster Autoscaler need to be modified as appropriate
+for the names of your ASGs, as well as account ID and AWS region before being used.
+
+The following policy provides the minimum privileges necessary for Cluster Autoscaler to run.
+When using this policy, you cannot use autodiscovery of ASGs. In addition, it restricts the
+IAM permissions to the node groups the Cluster Autoscaler is configured to scale.
+
+This in turn means that you must pass the following arguments to the Cluster Autoscaler
+binary, replacing min and max node counts and the ASG:
+
+```bash
+--aws-use-static-instance-list=false
+--nodes=1:100:exampleASG1
+--nodes=1:100:exampleASG2
+```
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "autoscaling:DescribeAutoScalingGroups",
+        "autoscaling:DescribeAutoScalingInstances",
+        "autoscaling:DescribeLaunchConfigurations",
+        "autoscaling:DescribeScalingActivities",
+        "autoscaling:SetDesiredCapacity",
+        "autoscaling:TerminateInstanceInAutoScalingGroup"
+      ],
+      "Resource": ["arn:aws:autoscaling:${YOUR_CLUSTER_AWS_REGION}:${YOUR_AWS_ACCOUNT_ID}:autoScalingGroup:*:autoScalingGroupName/${YOUR_ASG_NAME}"]
+    }
+  ]
+}
+```
+
 ### Using OIDC Federated Authentication
 OIDC federated authentication allows your service to assume an IAM role and interact with AWS services without having to store credentials as environment variables. For an example of how to use AWS IAM OIDC with the Cluster Autoscaler please see [here](CA_with_AWS_IAM_OIDC.md).
 
@@ -143,6 +179,20 @@ be labeled or tainted when they join the cluster, such as:
 
 * `k8s.io/cluster-autoscaler/node-template/label/foo`: `bar`
 * `k8s.io/cluster-autoscaler/node-template/taint/dedicated`: `NoSchedule`
+
+ASG labels can specify autoscaling options, overriding the global cluster-autoscaler
+settings for the labeled ASGs. Those labels takes the same values format as the
+cluster-autoscaler command line flags they override (a float or a duration, encoded
+as string). Currently supported autoscaling options (and example values) are:
+
+* `k8s.io/cluster-autoscaler/node-template/autoscaling-options/scaledownutilizationthreshold`: `0.5`
+  (overrides `--scale-down-utilization-threshold` value for that specific ASG)
+* `k8s.io/cluster-autoscaler/node-template/autoscaling-options/scaledowngpuutilizationthreshold`: `0.5`
+  (overrides `--scale-down-gpu-utilization-threshold` value for that specific ASG)
+* `k8s.io/cluster-autoscaler/node-template/autoscaling-options/scaledownunneededtime`: `10m0s`
+  (overrides `--scale-down-unneeded-time` value for that specific ASG)
+* `k8s.io/cluster-autoscaler/node-template/autoscaling-options/scaledownunreadytime`: `20m0s`
+  (overrides `--scale-down-unready-time` value for that specific ASG)
 
 **NOTE:** It is your responsibility to ensure such labels and/or taints are
 applied via the node's kubelet configuration at startup.

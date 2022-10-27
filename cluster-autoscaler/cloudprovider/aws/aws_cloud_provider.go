@@ -85,12 +85,12 @@ func (aws *awsCloudProvider) GetAvailableGPUTypes() map[string]struct{} {
 // NodeGroups returns all node groups configured for this cloud provider.
 func (aws *awsCloudProvider) NodeGroups() []cloudprovider.NodeGroup {
 	asgs := aws.awsManager.getAsgs()
-	ngs := make([]cloudprovider.NodeGroup, len(asgs))
-	for i, asg := range asgs {
-		ngs[i] = &AwsNodeGroup{
+	ngs := make([]cloudprovider.NodeGroup, 0, len(asgs))
+	for _, asg := range asgs {
+		ngs = append(ngs, &AwsNodeGroup{
 			asg:        asg,
 			awsManager: aws.awsManager,
-		}
+		})
 	}
 
 	return ngs
@@ -219,7 +219,10 @@ func (ng *AwsNodeGroup) Delete() error {
 // GetOptions returns NodeGroupAutoscalingOptions that should be used for this particular
 // NodeGroup. Returning a nil will result in using default options.
 func (ng *AwsNodeGroup) GetOptions(defaults config.NodeGroupAutoscalingOptions) (*config.NodeGroupAutoscalingOptions, error) {
-	return nil, cloudprovider.ErrNotImplemented
+	if ng.asg == nil || ng.asg.Tags == nil || len(ng.asg.Tags) == 0 {
+		return &defaults, nil
+	}
+	return ng.awsManager.GetAsgOptions(*ng.asg, defaults), nil
 }
 
 // IncreaseSize increases Asg size
@@ -316,7 +319,24 @@ func (ng *AwsNodeGroup) Nodes() ([]cloudprovider.Instance, error) {
 	instances := make([]cloudprovider.Instance, len(asgNodes))
 
 	for i, asgNode := range asgNodes {
-		instances[i] = cloudprovider.Instance{Id: asgNode.ProviderID}
+		var status *cloudprovider.InstanceStatus
+		instanceStatusString, err := ng.awsManager.GetInstanceStatus(asgNode)
+		if err != nil {
+			klog.V(4).Infof("Could not get instance status, continuing anyways: %v", err)
+		} else if instanceStatusString != nil && *instanceStatusString == placeholderUnfulfillableStatus {
+			status = &cloudprovider.InstanceStatus{
+				State: cloudprovider.InstanceCreating,
+				ErrorInfo: &cloudprovider.InstanceErrorInfo{
+					ErrorClass:   cloudprovider.OutOfResourcesErrorClass,
+					ErrorCode:    placeholderUnfulfillableStatus,
+					ErrorMessage: "AWS cannot provision any more instances for this node group",
+				},
+			}
+		}
+		instances[i] = cloudprovider.Instance{
+			Id:     asgNode.ProviderID,
+			Status: status,
+		}
 	}
 	return instances, nil
 }
@@ -396,5 +416,6 @@ func BuildAWS(opts config.AutoscalingOptions, do cloudprovider.NodeGroupDiscover
 	if err != nil {
 		klog.Fatalf("Failed to create AWS cloud provider: %v", err)
 	}
+	RegisterMetrics()
 	return provider
 }

@@ -220,7 +220,7 @@ func (mig *gceMig) IncreaseSize(delta int) error {
 	if int(size)+delta > mig.MaxSize() {
 		return fmt.Errorf("size increase too large - desired:%d max:%d", int(size)+delta, mig.MaxSize())
 	}
-	return mig.gceManager.SetMigSize(mig, size+int64(delta))
+	return mig.gceManager.CreateInstances(mig, int64(delta))
 }
 
 // DecreaseTargetSize decreases the target size of the node group. This function
@@ -330,7 +330,7 @@ func (mig *gceMig) Autoprovisioned() bool {
 // GetOptions returns NodeGroupAutoscalingOptions that should be used for this particular
 // NodeGroup. Returning a nil will result in using default options.
 func (mig *gceMig) GetOptions(defaults config.NodeGroupAutoscalingOptions) (*config.NodeGroupAutoscalingOptions, error) {
-	return nil, cloudprovider.ErrNotImplemented
+	return mig.gceManager.GetMigOptions(mig, defaults), nil
 }
 
 // TemplateNodeInfo returns a node template for this node group.
