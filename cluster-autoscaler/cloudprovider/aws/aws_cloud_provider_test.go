@@ -31,7 +31,7 @@ import (
 
 var testAwsManager = &AwsManager{
 	asgCache: &asgCache{
-		registeredAsgs: make([]*asg, 0),
+		registeredAsgs: make(map[AwsRef]*asg, 0),
 		asgToInstances: make(map[AwsRef][]AwsInstanceRef),
 		instanceToAsg:  make(map[AwsInstanceRef]*asg),
 		interrupt:      make(chan struct{}),
@@ -45,7 +45,7 @@ func newTestAwsManagerWithMockServices(mockAutoScaling autoScalingI, mockEC2 ec2
 	return &AwsManager{
 		awsService: awsService,
 		asgCache: &asgCache{
-			registeredAsgs:        make([]*asg, 0),
+			registeredAsgs:        make(map[AwsRef]*asg, 0),
 			asgToInstances:        make(map[AwsRef][]AwsInstanceRef),
 			instanceToAsg:         make(map[AwsInstanceRef]*asg),
 			asgInstanceTypeCache:  newAsgInstanceTypeCache(&awsService),
@@ -481,6 +481,12 @@ func TestDeleteNodesWithPlaceholder(t *testing.T) {
 		// we expect the instance count to be 1 after the call to DeleteNodes
 		expectedInstancesCount = 1
 	}).Return(nil)
+
+	a.On("DescribeScalingActivities",
+		&autoscaling.DescribeScalingActivitiesInput{
+			AutoScalingGroupName: aws.String("test-asg"),
+		},
+	).Return(&autoscaling.DescribeScalingActivitiesOutput{}, nil)
 
 	provider.Refresh()
 
