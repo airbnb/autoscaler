@@ -48,10 +48,41 @@ discover](#auto-discovery-setup) EC2 Auto Scaling Groups **(recommended)**, add
 Launch Configuration) and/or `ec2:DescribeLaunchTemplateVersions` (if you
 created your ASG using a Launch Template) to the `Action` list.
 
-If you prefer, you can restrict the target resources for the autoscaling actions
-by specifying Auto Scaling Group ARNs in the `Resource` list of the policy. More
-information can be found
-[here](https://docs.aws.amazon.com/autoscaling/latest/userguide/control-access-using-iam.html#policy-auto-scaling-resources).
+*NOTE:* The below policies/arguments to the Cluster Autoscaler need to be modified as appropriate
+for the names of your ASGs, as well as account ID and AWS region before being used.
+
+The following policy provides the minimum privileges necessary for Cluster Autoscaler to run.
+When using this policy, you cannot use autodiscovery of ASGs. In addition, it restricts the
+IAM permissions to the node groups the Cluster Autoscaler is configured to scale.
+
+This in turn means that you must pass the following arguments to the Cluster Autoscaler
+binary, replacing min and max node counts and the ASG:
+
+```bash
+--aws-use-static-instance-list=false
+--nodes=1:100:exampleASG1
+--nodes=1:100:exampleASG2
+```
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "autoscaling:DescribeAutoScalingGroups",
+        "autoscaling:DescribeAutoScalingInstances",
+        "autoscaling:DescribeLaunchConfigurations",
+        "autoscaling:DescribeScalingActivities",
+        "autoscaling:SetDesiredCapacity",
+        "autoscaling:TerminateInstanceInAutoScalingGroup"
+      ],
+      "Resource": ["arn:aws:autoscaling:${YOUR_CLUSTER_AWS_REGION}:${YOUR_AWS_ACCOUNT_ID}:autoScalingGroup:*:autoScalingGroupName/${YOUR_ASG_NAME}"]
+    }
+  ]
+}
+```
 
 ### Using OIDC Federated Authentication
 
