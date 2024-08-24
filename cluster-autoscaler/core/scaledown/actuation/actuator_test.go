@@ -788,11 +788,162 @@ func TestStartDeletion(t *testing.T) {
 					return true, nil, nil
 				})
 
-			// Hook node deletion at the level of cloud provider, to gather which nodes were deleted, and to fail the deletion for
-			// certain nodes to simulate errors.
-			provider := testprovider.NewTestCloudProvider(nil, func(nodeGroup string, node string) error {
-				if tc.failedNodeDeletion[node] {
-					return fmt.Errorf("SIMULATED ERROR: won't remove node")
+				// Set up other needed structures and options.
+				opts := config.AutoscalingOptions{
+					MaxScaleDownParallelism:        10,
+					MaxDrainParallelism:            5,
+					MaxPodEvictionTime:             0,
+					DaemonSetEvictionForEmptyNodes: true,
+				}
+
+				allPods := []*apiv1.Pod{}
+
+				for _, pods := range tc.pods {
+					allPods = append(allPods, pods...)
+				}
+
+				podLister := kube_util.NewTestPodLister(allPods)
+				pdbLister := kube_util.NewTestPodDisruptionBudgetLister([]*policyv1.PodDisruptionBudget{})
+				dsLister, err := kube_util.NewTestDaemonSetLister([]*appsv1.DaemonSet{ds})
+				if err != nil {
+					t.Fatalf("Couldn't create daemonset lister")
+				}
+
+				registry := kube_util.NewListerRegistry(nil, nil, podLister, pdbLister, dsLister, nil, nil, nil, nil)
+				ctx, err := NewScaleTestAutoscalingContext(opts, fakeClient, registry, provider, nil, nil)
+				if err != nil {
+					t.Fatalf("Couldn't set up autoscaling context: %v", err)
+				}
+				csr := clusterstate.NewClusterStateRegistry(provider, clusterstate.ClusterStateRegistryConfig{}, ctx.LogRecorder, NewBackoff(), nodegroupconfig.NewDefaultNodeGroupConfigProcessor(config.NodeGroupAutoscalingOptions{MaxNodeProvisionTime: 15 * time.Minute}))
+				for _, bucket := range emptyNodeGroupViews {
+					for _, node := range bucket.Nodes {
+						err := ctx.ClusterSnapshot.AddNodeWithPods(node, tc.pods[node.Name])
+						if err != nil {
+							t.Fatalf("Couldn't add node %q to snapshot: %v", node.Name, err)
+						}
+					}
+				}
+				for _, bucket := range drainNodeGroupViews {
+					for _, node := range bucket.Nodes {
+						pods, found := tc.pods[node.Name]
+						if !found {
+							t.Fatalf("Drain node %q doesn't have pods defined in the test case.", node.Name)
+						}
+						err := ctx.ClusterSnapshot.AddNodeWithPods(node, pods)
+						if err != nil {
+							t.Fatalf("Couldn't add node %q to snapshot: %v", node.Name, err)
+						}
+					}
+				}
+
+				wantScaleDownStatus := &status.ScaleDownStatus{
+					Result: tc.wantStatus.result,
+				}
+				for _, scaleDownNodeInfo := range tc.wantStatus.scaledDownNodes {
+					statusScaledDownNode := &status.ScaleDownNode{
+						Node:        generateNode(scaleDownNodeInfo.name),
+						NodeGroup:   tc.nodeGroups[scaleDownNodeInfo.nodeGroup],
+						EvictedPods: scaleDownNodeInfo.evictedPods,
+						UtilInfo:    scaleDownNodeInfo.utilInfo,
+					}
+					wantScaleDownStatus.ScaledDownNodes = append(wantScaleDownStatus.ScaledDownNodes, statusScaledDownNode)
+				}
+
+				// Create Actuator, run StartDeletion, and verify the error.
+				ndt := deletiontracker.NewNodeDeletionTracker(0)
+				ndb := NewNodeDeletionBatcher(&ctx, csr, ndt, 0*time.Second)
+				evictor := Evictor{EvictionRetryTime: 0, DsEvictionRetryTime: 0, DsEvictionEmptyNodeTimeout: 0, PodEvictionHeadroom: DefaultPodEvictionHeadroom}
+				actuator := Actuator{
+					ctx: &ctx, clusterState: csr, nodeDeletionTracker: ndt,
+					nodeDeletionScheduler: NewGroupDeletionScheduler(&ctx, ndt, ndb, evictor),
+					budgetProcessor:       budgets.NewScaleDownBudgetProcessor(&ctx),
+					configGetter:          nodegroupconfig.NewDefaultNodeGroupConfigProcessor(ctx.NodeGroupDefaults),
+				}
+				gotStatus, gotErr := actuator.StartDeletion(allEmptyNodes, allDrainNodes)
+				if diff := cmp.Diff(tc.wantErr, gotErr, cmpopts.EquateErrors()); diff != "" {
+					t.Errorf("StartDeletion error diff (-want +got):\n%s", diff)
+				}
+
+				// Verify ScaleDownStatus looks as expected.
+				ignoreSdNodeOrder := cmpopts.SortSlices(func(a, b *status.ScaleDownNode) bool { return a.Node.Name < b.Node.Name })
+				ignoreTimestamps := cmpopts.IgnoreFields(status.ScaleDownStatus{}, "NodeDeleteResultsAsOf")
+				cmpNg := cmp.Comparer(func(a, b *testprovider.TestNodeGroup) bool { return a.Id() == b.Id() })
+				statusCmpOpts := cmp.Options{ignoreSdNodeOrder, ignoreTimestamps, cmpNg, cmpopts.EquateEmpty()}
+				if diff := cmp.Diff(wantScaleDownStatus, gotStatus, statusCmpOpts); diff != "" {
+					t.Errorf("StartDeletion status diff (-want +got):\n%s", diff)
+				}
+
+				// Verify that all expected nodes were deleted using the cloud provider hook.
+				var gotDeletedNodes []string
+			nodesLoop:
+				for i := 0; i < len(tc.wantDeletedNodes); i++ {
+					select {
+					case deletedNode := <-deletedNodes:
+						gotDeletedNodes = append(gotDeletedNodes, deletedNode)
+					case <-time.After(3 * time.Second):
+						t.Errorf("Timeout while waiting for deleted nodes.")
+						break nodesLoop
+					}
+				}
+				ignoreStrOrder := cmpopts.SortSlices(func(a, b string) bool { return a < b })
+				if diff := cmp.Diff(tc.wantDeletedNodes, gotDeletedNodes, ignoreStrOrder); diff != "" {
+					t.Errorf("deletedNodes diff (-want +got):\n%s", diff)
+				}
+
+				// Verify that all expected pods were deleted using the fake k8s client hook.
+				var gotDeletedPods []string
+			podsLoop:
+				for i := 0; i < len(tc.wantDeletedPods); i++ {
+					select {
+					case deletedPod := <-deletedPods:
+						gotDeletedPods = append(gotDeletedPods, deletedPod)
+					case <-time.After(3 * time.Second):
+						t.Errorf("Timeout while waiting for deleted pods.")
+						break podsLoop
+					}
+				}
+				if diff := cmp.Diff(tc.wantDeletedPods, gotDeletedPods, ignoreStrOrder); diff != "" {
+					t.Errorf("deletedPods diff (-want +got):\n%s", diff)
+				}
+
+				// Verify that all expected taint updates happened using the fake k8s client hook.
+				allUpdatesCount := 0
+				for _, updates := range tc.wantTaintUpdates {
+					allUpdatesCount += len(updates)
+				}
+				gotTaintUpdates := make(map[string][][]apiv1.Taint)
+			taintsLoop:
+				for i := 0; i < allUpdatesCount; i++ {
+					select {
+					case taintUpdate := <-taintUpdates:
+						gotTaintUpdates[taintUpdate.nodeName] = append(gotTaintUpdates[taintUpdate.nodeName], taintUpdate.taints)
+					case <-time.After(3 * time.Second):
+						t.Errorf("Timeout while waiting for taint updates.")
+						break taintsLoop
+					}
+				}
+				startupTaintValue := cmpopts.IgnoreFields(apiv1.Taint{}, "Value")
+				if diff := cmp.Diff(tc.wantTaintUpdates, gotTaintUpdates, startupTaintValue, cmpopts.EquateEmpty()); diff != "" {
+					t.Errorf("taintUpdates diff (-want +got):\n%s", diff)
+				}
+
+				// Wait for all expected deletions to be reported in NodeDeletionTracker. Reporting happens shortly after the deletion
+				// in cloud provider we sync to above and so this will usually not wait at all. However, it can still happen
+				// that there is a delay between cloud provider deletion and reporting, in which case the results are not there yet
+				// and we need to wait for them before asserting.
+				err = waitForDeletionResultsCount(actuator.nodeDeletionTracker, len(tc.wantNodeDeleteResults), 3*time.Second, 200*time.Millisecond)
+				if err != nil {
+					t.Errorf("Timeout while waiting for node deletion results")
+				}
+
+				// Run StartDeletion again to gather node deletion results for deletions started in the previous call, and verify
+				// that they look as expected.
+				gotNextStatus, gotNextErr := actuator.StartDeletion(nil, nil)
+				if gotNextErr != nil {
+					t.Errorf("StartDeletion unexpected error: %v", gotNextErr)
+				}
+				if diff := cmp.Diff(tc.wantNodeDeleteResults, gotNextStatus.NodeDeleteResults, cmpopts.EquateEmpty(), cmpopts.EquateErrors()); diff != "" {
+					t.Errorf("NodeDeleteResults diff (-want +got):\n%s", diff)
 				}
 				deletedNodes <- node
 				return nil
